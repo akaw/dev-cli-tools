@@ -1,0 +1,444 @@
+#!/usr/bin/env bash
+
+# dDEV shortening tools
+# Usage: bin/dev [OPTIONS] [PARAMETERS]
+# Version: 1.0.0
+
+set -Eeuo pipefail
+trap cleanup SIGINT SIGTERM ERR EXIT
+
+# script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd -P)
+# ScriptDir: "$script_dir"
+
+# Display usage information
+usage() {
+    cat <<EOF
+Usage: $(basename "${BASH_SOURCE[0]}") [OPTIONS] [PARAMETERS]
+Shortcuts for ddev
+
+Available options:
+
+  -h, --help       Print this help and exit
+  -v, --verbose    Print script debug info
+  --no-color       Disable colored output
+
+Commands and their parameters:
+
+  b, build [component]         Build project components: storefront|admin|js|all
+  c, composer [command]        Run composer with optional parameter (default: install)
+  cp, update                   Composer Update project dependencies
+  ci, install                  Composer Install project dependencies
+  cr, require [comman          Composer Require composer package
+  n, new [project_type]        Create a new project: symfony|shopware
+  e, export [sql_file]         Export database (default: .project/db.sql.gz)
+  i, import                    Import database from .project/db.sql.gz
+  s, sequelace                 Start Sequel Ace and connect to the database
+  l, logs                      Print continuous logs
+  u, up                        Launch the project
+  d, down                      Stop the project
+  o, open                      Open the project in a browser
+  x, xdebug [on|off]           Start or stop xdebug: on|off
+  mail                         Launch mail service
+  t, test [options]            Run tests with optional parameter
+  r, restart                   Restart the project
+  st, status                   Check the status of the project
+  bk, backup                   Create a backup of the project
+  rs, restore [backup_file]    Restore the project from a backup
+  p, prune                     Prune unused Docker resources
+
+Shopware Console shortcuts:
+  ca:cl                        Clear cache
+  cacl                         Clear cache
+  cc                           Clear cache
+  m                            Database Migrate
+  dami                         Database Migrate
+  da:mi                        Database Migrate
+  plre                         Refresh plugins
+  pl:re                        Refresh plugins
+  pl                           List plugins
+  pli                          List plugins
+  plli                         List plugins
+
+EOF
+    exit 0
+}
+
+cleanup() {
+    trap - SIGINT SIGTERM ERR EXIT
+    # script cleanup here
+}
+
+setup_colors() {
+    if [[ -t 2 ]] && [[ -z "${NO_COLOR-}" ]] && [[ "${TERM-}" != "dumb" ]]; then
+        NOFORMAT='\033[0m' RED='\033[0;31m' GREEN='\033[0;32m' ORANGE='\033[0;33m' BLUE='\033[0;34m' PURPLE='\033[0;35m' CYAN='\033[0;36m' YELLOW='\033[1;33m'
+    else
+        NOFORMAT='' RED='' GREEN='' ORANGE='' BLUE='' PURPLE='' CYAN='' YELLOW=''
+    fi
+}
+
+msg() {
+    echo >&2 -e "${1-}"
+}
+
+die() {
+    local msg=$1
+    local code=${2-1}
+    msg "$msg"
+    exit "$code"
+}
+
+default() {
+    dev u s l
+    code .
+}
+
+parse_params() {
+    # default values of variables set from params
+    exportdb=0
+    importdb=0
+    importdbparam=""
+    sequelace=0
+    logs=0
+    launch=0
+    down=0
+    mail=0
+    xdebug=0
+    new=0
+    newparam=""
+    start=0
+    init=0
+    xdebugparam=""
+    ssh=0
+    console=0
+    consoleparam=""
+    build=0
+    buildparam=""
+    start=0
+    deletecache=0
+    test=0
+    testparam=""
+    restart=0
+    status=0
+    backup=0
+    restore=0
+    restoreparam=""
+    update=0
+    install=0
+    composer=0
+    require=0
+    requireparam=""
+    remove=0
+    removeparam=""
+    prune=0
+
+    while :; do
+        case "${1-}" in
+        -h | --help) usage ;;
+        -v | --verbose) set -x ;;
+        b | build)
+            build=1
+            buildparam="${2-}"
+            [[ -z "${buildparam-}" ]] && buildparam="all"
+            shift
+            ;;
+        e | export) exportdb=1 ;;
+        i | import) importdb=1 ;;
+        s | sequelace) sequelace=1 ;;
+        o | launch) launch=1 ;;
+        u | up) start=1 ;;
+        d | down) down=1 ;;
+        n | new)
+            new=1
+            newparam="${2}"
+            shift
+            ;;
+        l | logs) logs=1 ;;
+        x | xdebug)
+            xdebug=1
+            xdebugparam="${2-}"
+            shift
+            ;;
+        t | test)
+            test=1
+            testparam="${2-}"
+            shift
+            ;;
+        p | prune) prune=1 ;;
+        r | restart) restart=1 ;;
+        st | status) status=1 ;;
+        bk | backup) backup=1 ;;
+        rs | restore)
+            restore=1
+            restoreparam="${2-}"
+            shift
+            ;;
+        c | composer)
+            composer=1
+            composerparam="${2-}"
+            shift
+            ;;
+        cda | dump-autoload)
+            composer=1
+            composerparam="dump-autoload"
+            shift
+            ;;
+        cup | update)
+            composer=1
+            composerparam="update"
+            shift
+            ;;
+        cup | update)
+            composer=1
+            composerparam="update"
+            shift
+            ;;
+        cin | install)
+            composer=1
+            composerparam="install"
+            shift
+            ;;
+        cre | require)
+            composer=1
+            composerparam="require ${2-}"
+            shift
+            ;;
+        crm | remove)
+            remove=1
+            removeparam="${2-}"
+            shift
+            ;;
+        dc) deletecache=1 ;;
+        cc | cacl | ca:cl)
+            console=1
+            consoleparam="cache:clear"
+            ;;
+        plre | pl:re)
+            console=1
+            consoleparam="plugin:refresh"
+            ;;
+        pl | pli | plli | pl:li)
+            console=1
+            consoleparam="plugin:list"
+            ;;
+        plac | pl:ac)
+            console=1
+            consoleparam="plugin:activate ${2-}"
+            shift
+            ;;
+        plin | pl:in)
+            console=1
+            consoleparam="plugin:install ${2-}"
+            shift
+            ;;
+        plun | pl:un)
+            console=1
+            consoleparam="plugin:uninstall ${2-}"
+            shift
+            ;;
+        plde | pl:de)
+            console=1
+            consoleparam="plugin:deactivate ${2-}"
+            shift
+            ;;
+        dami | da:mi | m)
+            console=1
+            consoleparam="database:migrate ${2-} --all"
+            shift
+            ;;
+        console | con)
+            console=1
+            consoleparam="${2-}"
+            shift
+            ;;
+        ssh) ssh=1 ;;
+        start) start=1 ;;
+        init) init=1 ;;
+        mail) mail=1 ;;
+        --no-color) NO_COLOR=1 ;;
+        ?*)
+            usage
+            die "Unknown option: $1"
+            ;;
+        *) break ;;
+        esac
+        shift
+    done
+
+    args=("$@")
+
+    return 0
+}
+
+# Check if ddev is installed
+if ! command -v ddev &>/dev/null; then
+    die "ddev is not installed. Please install ddev first."
+fi
+
+if [ $# -eq 0 ]; then
+    read -p "Start DEV Environment (y/n)?" choice
+    case "$choice" in
+    y | Y) default ;;
+    *) usage ;;
+    esac
+    exit 1
+fi
+parse_params "$@"
+setup_colors
+
+if [[ $start == 1 ]]; then
+    echo "Starting project..."
+    ddev start
+fi
+
+if [[ $down == 1 ]]; then
+    echo "Stopping project..."
+    ddev stop
+fi
+
+if [[ $ssh == 1 ]]; then
+    echo "Connecting to project via SSH..."
+    ddev ssh
+fi
+
+if [[ $composer == 1 ]]; then
+    [[ -z "${composerparam-}" ]] && composerparam=""
+    echo "Updating project dependencies..."
+    ddev composer $composerparam
+    echo "Project dependencies updated"
+fi
+
+if [[ $console == 1 ]]; then
+    echo "Executing console command: $consoleparam"
+    ddev exec php bin/console $consoleparam
+fi
+
+if [[ $build == 1 ]]; then
+    echo "Building project components: $buildparam"
+    if [[ $buildparam == "storefront" ]]; then
+        ddev exec bin/build-storefront.sh
+    fi
+    if [[ $buildparam == "admin" ]]; then
+        ddev exec bin/build-administration.sh
+    fi
+    if [[ $buildparam == "js" ]]; then
+        ddev exec bin/build-js.sh
+    fi
+    if [[ $buildparam == "all" ]]; then
+        ddev exec bin/build-administration.sh
+        ddev exec bin/build-storefront.sh
+        ddev exec bin/build-js.sh
+    fi
+fi
+
+if [[ $exportdb == 1 ]]; then
+    echo "Exporting database..."
+    ddev export-db -f .project/db.sql.gz
+fi
+
+if [[ $importdb == 1 ]]; then
+    echo "Importing database..."
+    [[ -z "${importdbparam-}" ]] && importdbparam=".project/db.sql.gz"
+    ddev import-db -f $importdbparam
+fi
+
+if [[ $sequelace == 1 ]]; then
+    echo "Starting Sequel Ace..."
+    ddev sequelace
+fi
+
+if [[ $xdebug == 1 ]]; then
+    echo "Toggling xdebug: $xdebugparam"
+    [[ -z "${xdebugparam-}" ]] && xdebugparam="on"
+    ddev xdebug $xdebugparam
+fi
+
+if [[ $mail == 1 ]]; then
+    echo "Launching mail service..."
+    ddev launch -m
+fi
+
+if [[ $launch == 1 ]]; then
+    echo "Launching project..."
+    ddev launch
+fi
+
+if [[ $logs == 1 ]]; then
+    echo "Printing continuous logs..."
+    ddev logs -f
+fi
+
+if [[ $deletecache == 1 ]]; then
+    echo "Deleting cache..."
+    ddev exec rm -rf var/cache/dev*
+    ddev exec rm -rf var/cache/prod*
+fi
+
+if [[ $init == 1 ]]; then
+    echo "Initializing project..."
+    ddev start
+    ddev import-db -f .project/db.sql.gz
+fi
+
+if [[ $test == 1 ]]; then
+    echo "Running tests: $testparam"
+    [[ -z "${testparam-}" ]] && testparam=""
+    ddev exec php bin/phpunit $testparam
+fi
+
+if [[ $restart == 1 ]]; then
+    echo "Restarting project..."
+    ddev restart
+fi
+
+if [[ $status == 1 ]]; then
+    echo "Checking project status..."
+    ddev describe
+fi
+
+if [[ $backup == 1 ]]; then
+    echo "Creating backup..."
+    ddev exec tar -czf backup.tar.gz .
+    echo "Backup created: backup.tar.gz"
+fi
+
+if [[ $restore == 1 ]]; then
+    echo "Restoring project from backup: $restoreparam"
+    [[ -z "${restoreparam-}" ]] && restoreparam="backup.tar.gz"
+    ddev exec tar -xzf $restoreparam
+    echo "Project restored from: $restoreparam"
+fi
+
+if [[ $prune == 1 ]]; then
+    echo "Pruning unused Docker resources..."
+    ddev exec docker system prune -f
+    echo "Unused Docker resources pruned"
+fi
+
+if [[ $new == 1 ]]; then
+    echo "Creating new project: $newparam"
+    [[ -z "${newparam-}" ]] && newparam="symfony"
+    if [[ $newparam == "symfony" ]]; then
+        echo "Configuring ddev symfony project..."
+        ddev config --docroot=public
+        ddev composer create symfony/skeleton
+        ddev composer require webapp
+        ddev launch
+    elif [[ $newparam == "shopware" ]]; then
+        echo "Configuring ddev shopware project..."
+        ddev config --project-type=shopware6 --disable-settings-management --docroot=shopware/public --create-docroot --web-working-dir=/var/www/html/shopware \
+            --database=mysql:8.0 --php-version=8.2 --nodejs-version=20 --webserver-type=apache-fpm \
+            --web-environment-add="DATABASE_URL=mysql://db:db@db:3306/db,MAILER_DSN=smtp://localhost:1025?encryption=&auth_mode=,APP_URL=\${DDEV_PRIMARY_URL},APP_DEBUG=1,APP_ENV=dev"
+
+        ddev start
+
+        echo "Creating shopware project..."
+        ddev exec "cd /var/www/html && rm -rf shopware/ && composer create-project shopware/production shopware -n"
+
+        echo "Installing Shopware..."
+        ddev exec bin/console system:install --basic-setup --shop-locale=de-DE
+    else
+        die "Unknown project type: $newparam"
+    fi
+fi
+
+exit 0
