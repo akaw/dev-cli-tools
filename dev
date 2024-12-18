@@ -39,7 +39,7 @@ Commands and their parameters:
   d, down                      Stop the project
   o, open                      Open the project in a browser
   x, xdebug [on|off]           Start or stop xdebug: on|off
-  mail                         Launch mail service
+  m, mail                         Launch mail service
   t, test [options]            Run tests with optional parameter
   r, restart                   Restart the project
   st, status                   Check the status of the project
@@ -51,7 +51,7 @@ Shopware Console shortcuts:
   ca:cl                        Clear cache
   cacl                         Clear cache
   cc                           Clear cache
-  m                            Database Migrate
+
   dami                         Database Migrate
   da:mi                        Database Migrate
   plre                         Refresh plugins
@@ -151,8 +151,8 @@ parse_params() {
         i | import) importdb=1 ;;
         s | sequelace) sequelace=1 ;;
         o | launch) launch=1 ;;
-        u | up) start=1 ;;
-        d | down) down=1 ;;
+        u | up | start) start=1 ;;
+        d | down | stop) down=1 ;;
         n | new)
             new=1
             newparam="${2}"
@@ -214,39 +214,39 @@ parse_params() {
             shift
             ;;
         dc) deletecache=1 ;;
-        cc | cacl | ca:cl)
+        cc | cacl | ca:cl | clear:cache)
             console=1
             consoleparam="cache:clear"
             ;;
-        plre | pl:re)
+        plre | pl:re | plugin:refresh)
             console=1
             consoleparam="plugin:refresh"
             ;;
-        pl | pli | plli | pl:li)
+        pl | pli | plli | pl:li | plugin:list)
             console=1
             consoleparam="plugin:list"
             ;;
-        plac | pl:ac)
+        plac | pl:ac | plugin:activate)
             console=1
             consoleparam="plugin:activate ${2-}"
             shift
             ;;
-        plin | pl:in)
+        plin | pl:in | plugin:install)
             console=1
             consoleparam="plugin:install ${2-}"
             shift
             ;;
-        plun | pl:un)
+        plun | pl:un | plugin:uninstall)
             console=1
             consoleparam="plugin:uninstall ${2-}"
             shift
             ;;
-        plde | pl:de)
+        plde | pl:de | plugin:deactivate)
             console=1
             consoleparam="plugin:deactivate ${2-}"
             shift
             ;;
-        dami | da:mi | m)
+        dami | da:mi | database:migrate)
             console=1
             consoleparam="database:migrate ${2-} --all"
             shift
@@ -257,9 +257,9 @@ parse_params() {
             shift
             ;;
         ssh) ssh=1 ;;
-        start) start=1 ;;
+
         init) init=1 ;;
-        mail) mail=1 ;;
+        m | mail) mail=1 ;;
         --no-color) NO_COLOR=1 ;;
         ?*)
             usage
