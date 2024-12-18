@@ -139,7 +139,7 @@ upgrade() {
     echo "Downloading the latest version of the script..."
     curl -o "$script_path" "$url"
     chmod +x "$script_path"
-    echo "Upgrade complete. Please restart the script."
+    echo "Upgrade complete."
     exit 0
 }
 
