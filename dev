@@ -25,14 +25,14 @@ Commands and their parameters:
 
   b, build [component]         Build project components: storefront|admin|js|all
   c, composer [command]        Run composer with optional parameter (default: install)
-  cup, update                   Composer Update project dependencies
-  cin, install                  Composer Install project dependencies
-  cre, require [command]        Composer Require composer package
+  cup, update                  Composer Update project dependencies
+  cin, install                 Composer Install project dependencies
+  cre, require [command]       Composer Require composer package
   cda, dump-autoload           Composer Dump Autoload
   crm, remove [package]        Composer Remove composer package
   n, new [project_type]        Create a new project: symfony|shopware
   e, export [sql_file]         Export database (default: .project/db.sql.gz)
-  i, import                    Import database from .project/db.sql.gz
+  i, import [sql_file]         Import database from .project/db.sql.gz
   s, sequelace                 Start Sequel Ace and connect to the database
   l, logs                      Print continuous logs
   u, up                        Launch the project
@@ -103,6 +103,7 @@ parse_params() {
     exportdb=0
     importdb=0
     importdbparam=""
+    exportdbparam=""
     sequelace=0
     logs=0
     launch=0
@@ -338,7 +339,8 @@ fi
 
 if [[ $exportdb == 1 ]]; then
     echo "Exporting database..."
-    ddev export-db -f .project/db.sql.gz
+    [[ -z "${exportdbparam-}" ]] && exportdbparam=".project/db.sql.gz"
+    ddev export-db -f $exportdbparam
 fi
 
 if [[ $importdb == 1 ]]; then
