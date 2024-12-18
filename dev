@@ -25,9 +25,9 @@ Commands and their parameters:
 
   b, build [component]         Build project components: storefront|admin|js|all
   c, composer [command]        Run composer with optional parameter (default: install)
-  cp, update                   Composer Update project dependencies
-  ci, install                  Composer Install project dependencies
-  cr, require [command]        Composer Require composer package
+  cup, update                   Composer Update project dependencies
+  cin, install                  Composer Install project dependencies
+  cre, require [command]        Composer Require composer package
   cda, dump-autoload           Composer Dump Autoload
   crm, remove [package]        Composer Remove composer package
   n, new [project_type]        Create a new project: symfony|shopware
