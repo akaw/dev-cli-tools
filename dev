@@ -95,11 +95,13 @@ EOF
     exit 0
 }
 
+# Cleanup function to handle script termination
 cleanup() {
     trap - SIGINT SIGTERM ERR EXIT
     # script cleanup here
 }
 
+# Setup colors for terminal output
 setup_colors() {
     if [[ -t 2 ]] && [[ -z "${NO_COLOR-}" ]] && [[ "${TERM-}" != "dumb" ]]; then
         NOFORMAT='\033[0m' RED='\033[0;31m' GREEN='\033[0;32m' ORANGE='\033[0;33m' BLUE='\033[0;34m' PURPLE='\033[0;35m' CYAN='\033[0;36m' YELLOW='\033[1;33m'
@@ -108,10 +110,12 @@ setup_colors() {
     fi
 }
 
+# Print a message to stderr
 msg() {
     echo >&2 -e "${1-}"
 }
 
+# Print a message to stderr and exit with a given code
 die() {
     local msg=$1
     local code=${2-1}
@@ -119,11 +123,13 @@ die() {
     exit "$code"
 }
 
+# Default function to start the development environment
 default() {
     dev u s l
     code .
 }
 
+# Parse command-line parameters
 parse_params() {
     # default values of variables set from params
     exportdb=0
@@ -205,19 +211,9 @@ parse_params() {
             restoreparam="${2-}"
             shift
             ;;
-        c | composer)
+        com | composer)
             composer=1
             composerparam="${2-}"
-            shift
-            ;;
-        cda | dump-autoload)
-            composer=1
-            composerparam="dump-autoload"
-            shift
-            ;;
-        cup | update)
-            composer=1
-            composerparam="update"
             shift
             ;;
         cup | update)
@@ -238,6 +234,11 @@ parse_params() {
         crm | remove)
             remove=1
             removeparam="${2-}"
+            shift
+            ;;
+        cda | dump-autoload)
+            composer=1
+            composerparam="dump-autoload"
             shift
             ;;
         dc) deletecache=1 ;;
@@ -278,7 +279,7 @@ parse_params() {
             consoleparam="database:migrate ${2-} --all"
             shift
             ;;
-        console | con)
+        c | con | console2024-12-18 12:19:25)
             console=1
             consoleparam="${2-}"
             shift
@@ -307,6 +308,7 @@ if ! command -v ddev &>/dev/null; then
     die "ddev is not installed. Please install ddev first."
 fi
 
+# Prompt user to start DEV environment if no arguments are provided
 if [ $# -eq 0 ]; then
     read -p "Start DEV Environment (y/n)?" choice
     case "$choice" in
@@ -318,21 +320,25 @@ fi
 parse_params "$@"
 setup_colors
 
+# Start the project
 if [[ $start == 1 ]]; then
     echo "Starting project..."
     ddev start
 fi
 
+# Stop the project
 if [[ $down == 1 ]]; then
     echo "Stopping project..."
     ddev stop
 fi
 
+# Connect to the project via SSH
 if [[ $ssh == 1 ]]; then
     echo "Connecting to project via SSH..."
     ddev ssh
 fi
 
+# Run composer commands
 if [[ $composer == 1 ]]; then
     [[ -z "${composerparam-}" ]] && composerparam=""
     echo "Updating project dependencies..."
@@ -340,11 +346,13 @@ if [[ $composer == 1 ]]; then
     echo "Project dependencies updated"
 fi
 
+# Execute console commands
 if [[ $console == 1 ]]; then
     echo "Executing console command: $consoleparam"
     ddev exec php bin/console $consoleparam
 fi
 
+# Build project components
 if [[ $build == 1 ]]; then
     echo "Building project components: $buildparam"
     if [[ $buildparam == "storefront" ]]; then
@@ -363,78 +371,92 @@ if [[ $build == 1 ]]; then
     fi
 fi
 
+# Export the database
 if [[ $exportdb == 1 ]]; then
     echo "Exporting database..."
     [[ -z "${exportdbparam-}" ]] && exportdbparam=".project/db.sql.gz"
     ddev export-db -f $exportdbparam
 fi
 
+# Import the database
 if [[ $importdb == 1 ]]; then
     echo "Importing database..."
     [[ -z "${importdbparam-}" ]] && importdbparam=".project/db.sql.gz"
     ddev import-db -f $importdbparam
 fi
 
+# Start Sequel Ace
 if [[ $sequelace == 1 ]]; then
     echo "Starting Sequel Ace..."
     ddev sequelace
 fi
 
+# Toggle xdebug
 if [[ $xdebug == 1 ]]; then
     echo "Toggling xdebug: $xdebugparam"
     [[ -z "${xdebugparam-}" ]] && xdebugparam="on"
     ddev xdebug $xdebugparam
 fi
 
+# Launch mail service
 if [[ $mail == 1 ]]; then
     echo "Launching mail service..."
     ddev launch -m
 fi
 
+# Launch the project
 if [[ $launch == 1 ]]; then
     echo "Launching project..."
     ddev launch
 fi
 
+# Print continuous logs
 if [[ $logs == 1 ]]; then
     echo "Printing continuous logs..."
     ddev logs -f
 fi
 
+# Delete cache
 if [[ $deletecache == 1 ]]; then
     echo "Deleting cache..."
     ddev exec rm -rf var/cache/dev*
     ddev exec rm -rf var/cache/prod*
 fi
 
+# Initialize the project
 if [[ $init == 1 ]]; then
     echo "Initializing project..."
     ddev start
     ddev import-db -f .project/db.sql.gz
 fi
 
+# Run tests
 if [[ $test == 1 ]]; then
     echo "Running tests: $testparam"
     [[ -z "${testparam-}" ]] && testparam=""
     ddev exec php bin/phpunit $testparam
 fi
 
+# Restart the project
 if [[ $restart == 1 ]]; then
     echo "Restarting project..."
     ddev restart
 fi
 
+# Check project status
 if [[ $status == 1 ]]; then
     echo "Checking project status..."
     ddev describe
 fi
 
+# Create a backup
 if [[ $backup == 1 ]]; then
     echo "Creating backup..."
     ddev exec tar -czf backup.tar.gz .
     echo "Backup created: backup.tar.gz"
 fi
 
+# Restore the project from a backup
 if [[ $restore == 1 ]]; then
     echo "Restoring project from backup: $restoreparam"
     [[ -z "${restoreparam-}" ]] && restoreparam="backup.tar.gz"
@@ -442,12 +464,14 @@ if [[ $restore == 1 ]]; then
     echo "Project restored from: $restoreparam"
 fi
 
+# Prune unused Docker resources
 if [[ $prune == 1 ]]; then
     echo "Pruning unused Docker resources..."
     ddev exec docker system prune -f
     echo "Unused Docker resources pruned"
 fi
 
+# Create a new project
 if [[ $new == 1 ]]; then
     echo "Creating new project: $newparam"
     [[ -z "${newparam-}" ]] && newparam="symfony"
