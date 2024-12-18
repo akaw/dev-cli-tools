@@ -5,9 +5,11 @@
 # This script provides shortcuts for common ddev, symfony, shopware and other tools commands.
 #
 # Author: Andre Witte
+#
 # Description: dDEV shortening tools
 # Usage: dev [OPTIONS] [PARAMETERS]
 # Version: 1.0.0
+# https://github.com/akaw/dev-cli-tools/
 #
 # Examples:
 #   dev u s l
@@ -78,7 +80,6 @@ Shopware Console shortcuts:
   ca:cl                        Clear cache
   cacl                         Clear cache
   cc                           Clear cache
-
   dami                         Database Migrate
   da:mi                        Database Migrate
   plre                         Refresh plugins
