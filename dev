@@ -28,7 +28,9 @@ Commands and their parameters:
   c, composer [command]        Run composer with optional parameter (default: install)
   cp, update                   Composer Update project dependencies
   ci, install                  Composer Install project dependencies
-  cr, require [comman          Composer Require composer package
+  cr, require [command]        Composer Require composer package
+  cda, dump-autoload           Composer Dump Autoload
+  crm, remove [package]        Composer Remove composer package
   n, new [project_type]        Create a new project: symfony|shopware
   e, export [sql_file]         Export database (default: .project/db.sql.gz)
   i, import                    Import database from .project/db.sql.gz
@@ -58,6 +60,11 @@ Shopware Console shortcuts:
   pl                           List plugins
   pli                          List plugins
   plli                         List plugins
+  plac, pl:ac [plugin]         Activate plugin
+  plin, pl:in [plugin]         Install plugin
+  plun, pl:un [plugin]         Uninstall plugin
+  plde, pl:de [plugin]         Deactivate plugin
+  console, con [command]       Execute console command
 
 EOF
     exit 0
