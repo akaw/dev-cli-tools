@@ -65,13 +65,14 @@ Commands and their parameters:
   d, down                      Stop the project
   o, open                      Open the project in a browser
   x, xdebug [on|off]           Start or stop xdebug: on|off
-  m, mail                         Launch mail service
+  m, mail                      Launch mail service
   t, test [options]            Run tests with optional parameter
   r, restart                   Restart the project
-  st, status                   Check the status of the project
+  st, status, info             Check the status of the project
   bk, backup                   Create a backup of the project
   rs, restore [backup_file]    Restore the project from a backup
   p, prune                     Prune unused Docker resources
+  upgrade                      Upgrade the script to the latest version
 
 Shopware Console shortcuts:
   ca:cl                        Clear cache
@@ -124,9 +125,21 @@ die() {
 }
 
 # Default function to start the development environment
+# This function is called when no arguments are provided
+# u = up, s = sequelace, l = logs, o = open
 default() {
-    dev u s l
-    code .
+    dev u s l o info
+}
+
+# Function to upgrade the script
+upgrade() {
+    local url="https://raw.githubusercontent.com/akaw/dev-cli-tools/refs/heads/main/dev"
+    local script_path="${BASH_SOURCE[0]}"
+    echo "Downloading the latest version of the script..."
+    curl -o "$script_path" "$url"
+    chmod +x "$script_path"
+    echo "Upgrade complete. Please restart the script."
+    exit 0
 }
 
 # Parse command-line parameters
@@ -169,6 +182,7 @@ parse_params() {
     remove=0
     removeparam=""
     prune=0
+    upgrade=0
 
     while :; do
         case "${1-}" in
@@ -204,7 +218,7 @@ parse_params() {
             ;;
         p | prune) prune=1 ;;
         r | restart) restart=1 ;;
-        st | status) status=1 ;;
+        st | status | info) status=1 ;;
         bk | backup) backup=1 ;;
         rs | restore)
             restore=1
@@ -288,6 +302,7 @@ parse_params() {
 
         init) init=1 ;;
         m | mail) mail=1 ;;
+        upgrade) upgrade=1 ;;
         --no-color) NO_COLOR=1 ;;
         ?*)
             usage
@@ -428,6 +443,7 @@ if [[ $init == 1 ]]; then
     echo "Initializing project..."
     ddev start
     ddev import-db -f .project/db.sql.gz
+    ddev describe
 fi
 
 # Run tests
@@ -469,6 +485,11 @@ if [[ $prune == 1 ]]; then
     echo "Pruning unused Docker resources..."
     ddev exec docker system prune -f
     echo "Unused Docker resources pruned"
+fi
+
+# Upgrade the script
+if [[ $upgrade == 1 ]]; then
+    upgrade
 fi
 
 # Create a new project
