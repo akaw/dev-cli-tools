@@ -19,7 +19,6 @@ Shortcuts for ddev
 Available options:
 
   -h, --help       Print this help and exit
-  -v, --verbose    Print script debug info
   --no-color       Disable colored output
 
 Commands and their parameters:
