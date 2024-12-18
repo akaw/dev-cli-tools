@@ -128,7 +128,7 @@ die() {
 # This function is called when no arguments are provided
 # u = up, s = sequelace, l = logs, o = open
 default() {
-    dev u s l o info
+    dev u s o info
 }
 
 # Function to upgrade the script
@@ -293,7 +293,7 @@ parse_params() {
             consoleparam="database:migrate ${2-} --all"
             shift
             ;;
-        c | con | console2024-12-18 12:19:25)
+        c | con | console)
             console=1
             consoleparam="${2-}"
             shift
