@@ -1,8 +1,34 @@
 #!/usr/bin/env bash
 
-# dDEV shortening tools
-# Usage: bin/dev [OPTIONS] [PARAMETERS]
+# dev - Shortcuts for ddev,symfony,shopware and other tools
+#
+# This script provides shortcuts for common ddev, symfony, shopware and other tools commands.
+#
+# Author: Andre Witte
+# Description: dDEV shortening tools
+# Usage: dev [OPTIONS] [PARAMETERS]
 # Version: 1.0.0
+#
+# Examples:
+#   dev u s l
+#   dev composer install
+#   dev composer require symfony/webpack-encore-bundle
+#   dev composer remove symfony/webpack-encore-bundle
+#   dev composer dump-autoload
+#   dev composer update
+#   dev new symfony
+#   dev new shopware
+#   dev export
+#   dev import
+#   dev sequelace
+#   dev logs
+#   dev up
+#   dev down
+#   dev open
+#   dev xdebug on
+#   dev xdebug off
+#   dev mail
+#   ...
 
 set -Eeuo pipefail
 trap cleanup SIGINT SIGTERM ERR EXIT
@@ -14,7 +40,7 @@ trap cleanup SIGINT SIGTERM ERR EXIT
 usage() {
     cat <<EOF
 Usage: $(basename "${BASH_SOURCE[0]}") [OPTIONS] [PARAMETERS]
-Shortcuts for ddev
+Shortcuts for ddev,symfony,shopware and other tools
 
 Available options:
 
