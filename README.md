@@ -6,14 +6,14 @@
 
 ## Installation
 
-1. Download the script:
+2. Download the script:
     ```bash
-    curl -o /usr/local/bin/dev https://raw.githubusercontent.com/akaw/dev-cli-tools/refs/heads/main/dev
+    curl -o ~/.bin https://raw.githubusercontent.com/akaw/dev-cli-tools/refs/heads/main/dev
     ```
 
-2. Make the script executable:
+3. Make the script executable:
     ```bash
-    chmod +x /usr/local/bin/dev
+    chmod +x ~/.bin
     ```
 
 ## Usage
@@ -24,7 +24,8 @@ The script offers a variety of commands and options. Here are some examples:
 
 - Start the project:
     ```bash
-    dev up
+    ddev start
+    dev up 
     dev u
     ```
 
@@ -50,25 +51,33 @@ The script offers a variety of commands and options. Here are some examples:
 
 - Install dependencies:
     ```bash
+    ddev composer install
     dev composer install
+    dev c install
     dev cin
     ```
 
 - Update dependencies:
     ```bash
+    ddev composer update
     dev composer update
+    dev c update
     dev cup
     ```
 
 - Add a package:
     ```bash
+    ddev composer require symfony/webpack-encore-bundle
     dev composer require symfony/webpack-encore-bundle
+    dev c require symfony/webpack-encore-bundle
     dev cre symfony/webpack-encore-bundle
     ```
 
 - Remove a package:
     ```bash
+    ddev composer remove symfony/webpack-encore-bundle
     dev composer remove symfony/webpack-encore-bundle
+    dev c remove symfony/webpack-encore-bundle
     dev crm symfony/webpack-encore-bundle
     ```
 
@@ -76,12 +85,14 @@ The script offers a variety of commands and options. Here are some examples:
 
 - Export the database:
     ```bash
+    ddev export-db -f .project/db.sql.gz
     dev export
     dev e
     ```
 
 - Import the database:
     ```bash
+    ddev import-db -f .project/db.sql.gz
     dev import
     dev i
     ```
@@ -90,8 +101,11 @@ The script offers a variety of commands and options. Here are some examples:
 
 - Clear cache:
     ```bash
-    dev cc
+    ddev exec php bin/console cache:clear
+    dev console cache:clear
+    dev con cache:clear
     dev ca:cl
+    dev cc
     ```
 
 - List plugins:
