@@ -134,5 +134,5 @@ dev --help
 
 ## Author
 
-Andre Witte
+andre.witte@freenet.de
 
