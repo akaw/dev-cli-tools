@@ -143,6 +143,14 @@ upgrade() {
     exit 0
 }
 
+# Function to check if a file exists
+check_file_exists() {
+    local file_path="$1"
+    if [[ ! -f "$file_path" ]]; then
+        die "File not found: $file_path"
+    fi
+}
+
 # Parse command-line parameters
 parse_params() {
     # default values of variables set from params
@@ -368,7 +376,7 @@ if [[ $console == 1 ]]; then
     ddev exec php bin/console $consoleparam
 fi
 
-# Build project components
+# Build shopware components
 if [[ $build == 1 ]]; then
     echo "Building project components: $buildparam"
     if [[ $buildparam == "storefront" ]]; then
@@ -391,6 +399,7 @@ fi
 if [[ $exportdb == 1 ]]; then
     echo "Exporting database..."
     [[ -z "${exportdbparam-}" ]] && exportdbparam=".project/db.sql.gz"
+    check_file_exists "$exportdbparam"
     ddev export-db -f $exportdbparam
 fi
 
@@ -398,6 +407,7 @@ fi
 if [[ $importdb == 1 ]]; then
     echo "Importing database..."
     [[ -z "${importdbparam-}" ]] && importdbparam=".project/db.sql.gz"
+    check_file_exists "$importdbparam"
     ddev import-db -f $importdbparam
 fi
 
@@ -442,8 +452,9 @@ fi
 # Initialize the project
 if [[ $init == 1 ]]; then
     echo "Initializing project..."
+    check_file_exists ".project/init.sql.gz"
     ddev start
-    ddev import-db -f .project/db.sql.gz
+    ddev import-db -f .project/init.sql.gz
     ddev describe
 fi
 
