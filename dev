@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
 
-# dev - Shortcuts for ddev,symfony,shopware and other tools
-#
-# This script provides shortcuts for common ddev, symfony, shopware and other tools commands.
+# This script provides shortcuts for common ddev, shopware and other tools commands.
 #
 # Author: Andre Witte
 #
@@ -530,6 +528,7 @@ if [[ $new == 1 ]]; then
     else
         die "Unknown project type: $newparam"
     fi
+    mkdir .project
 fi
 
 exit 0
