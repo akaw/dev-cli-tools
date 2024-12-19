@@ -346,6 +346,8 @@ setup_colors
 if [[ $start == 1 ]]; then
     echo "Starting project..."
     ddev start
+    ddev describe
+
 fi
 
 # Stop the project
