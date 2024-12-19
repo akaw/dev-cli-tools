@@ -1,124 +1,124 @@
 # dev-cli-tools
 
-## Übersicht
+## Overview
 
-`dev-cli-tools` ist ein Bash-Skript, das Abkürzungen für häufig verwendete Befehle von ddev, Symfony, Shopware und anderen Tools bietet. Es erleichtert die Verwaltung und Entwicklung von Projekten durch einfache Befehle.
+`dev-cli-tools` is a Bash script that provides shortcuts for commonly used commands from ddev, Shopware, and other tools. It simplifies project management and development through easy commands.
 
 ## Installation
 
-1. Lade das Skript herunter:
+1. Download the script:
     ```bash
     curl -o /usr/local/bin/dev https://raw.githubusercontent.com/akaw/dev-cli-tools/refs/heads/main/dev
     ```
 
-2. Mache das Skript ausführbar:
+2. Make the script executable:
     ```bash
     chmod +x /usr/local/bin/dev
     ```
 
-## Verwendung
+## Usage
 
-Das Skript bietet eine Vielzahl von Befehlen und Optionen. Hier sind einige Beispiele:
+The script offers a variety of commands and options. Here are some examples:
 
-### Allgemeine ddev Befehle
+### General ddev Commands
 
-- Starte das Projekt:
+- Start the project:
     ```bash
     dev up
     dev u
     ```
 
-- Stoppe das Projekt:
+- Stop the project:
     ```bash
     dev down
     dev d
     ```
 
-- Öffne das Projekt im Browser:
+- Open the project in the browser:
     ```bash
     dev open
     dev o
     ```
 
-- Zeige Logs an:
+- Show logs:
     ```bash
     dev logs
     dev l
     ```
 
-### Composer-Befehle
+### Composer Commands
 
-- Installiere Abhängigkeiten:
+- Install dependencies:
     ```bash
     dev composer install
     dev cin
     ```
 
-- Aktualisiere Abhängigkeiten:
+- Update dependencies:
     ```bash
     dev composer update
     dev cup
     ```
 
-- Füge ein Paket hinzu:
+- Add a package:
     ```bash
     dev composer require symfony/webpack-encore-bundle
     dev cre symfony/webpack-encore-bundle
     ```
 
-- Entferne ein Paket:
+- Remove a package:
     ```bash
     dev composer remove symfony/webpack-encore-bundle
     dev crm symfony/webpack-encore-bundle
     ```
 
-### Datenbank-Befehle
+### Database Commands
 
-- Exportiere die Datenbank:
+- Export the database:
     ```bash
     dev export
     dev e
     ```
 
-- Importiere die Datenbank:
+- Import the database:
     ```bash
     dev import
     dev i
     ```
 
-### Shopware-Befehle
+### Shopware Commands
 
-- Cache leeren:
+- Clear cache:
     ```bash
     dev cc
     dev ca:cl
     ```
 
-- Plugins auflisten:
+- List plugins:
     ```bash
     dev pl
     ```
 
-- Plugin aktivieren:
+- Activate plugin:
     ```bash
     dev plac [plugin]
     ```
 
-### Upgrade des Skripts
+### Upgrade the Script
 
-Um das Skript auf die neueste Version zu aktualisieren, verwende den folgenden Befehl:
+To update the script to the latest version, use the following command:
 ```bash
 dev upgrade
 ```
 
-## Hilfe
+## Help
 
-Für eine vollständige Liste der verfügbaren Befehle und Optionen, führe den folgenden Befehl aus:
+For a complete list of available commands and options, run the following command:
 ```bash
 dev --help
 ```
 
-## Autor
+## Author
 
 Andre Witte
 
