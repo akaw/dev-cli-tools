@@ -75,9 +75,8 @@ Commands and their parameters:
   upgrade                      Upgrade the script to the latest version
 
 Shopware Console shortcuts:
-  ca:cl                        Clear cache
-  cacl                         Clear cache
   cc                           Clear cache
+  dc                           Delete cache
   dami                         Database Migrate
   da:mi                        Database Migrate
   plre                         Refresh plugins
@@ -267,7 +266,7 @@ parse_params() {
             console=1
             consoleparam="cache:clear"
             ;;
-        plre | pl:re | plugin:refresh)
+        pr | plre | pl:re | plugin:refresh)
             console=1
             consoleparam="plugin:refresh"
             ;;
@@ -275,27 +274,27 @@ parse_params() {
             console=1
             consoleparam="plugin:list"
             ;;
-        plac | pl:ac | plugin:activate)
+        pa | plac | pl:ac | plugin:activate)
             console=1
             consoleparam="plugin:activate ${2-}"
             shift
             ;;
-        plin | pl:in | plugin:install)
+        pi | plin | pl:in | plugin:install)
             console=1
             consoleparam="plugin:install ${2-}"
             shift
             ;;
-        plun | pl:un | plugin:uninstall)
+        pu | plun | pl:un | plugin:uninstall)
             console=1
             consoleparam="plugin:uninstall ${2-}"
             shift
             ;;
-        plde | pl:de | plugin:deactivate)
+        pd | plde | pl:de | plugin:deactivate)
             console=1
             consoleparam="plugin:deactivate ${2-}"
             shift
             ;;
-        dami | da:mi | database:migrate)
+        dm | dami | da:mi | database:migrate)
             console=1
             consoleparam="database:migrate ${2-} --all"
             shift
