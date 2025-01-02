@@ -262,7 +262,7 @@ parse_params() {
             composerparam="dump-autoload"
             shift
             ;;
-        dc) deletecache=1 ;;
+        dc | cade | ca:de | delete:cache) deletecache=1 ;;
         cc | cacl | ca:cl | clear:cache)
             console=1
             consoleparam="cache:clear"
