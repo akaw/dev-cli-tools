@@ -75,8 +75,9 @@ Commands and their parameters:
   upgrade                      Upgrade the script to the latest version
 
 Shopware Console shortcuts:
+  ca:cl                        Clear cache
+  cacl                         Clear cache
   cc                           Clear cache
-  dc                           Delete cache
   dami                         Database Migrate
   da:mi                        Database Migrate
   plre                         Refresh plugins
@@ -261,12 +262,12 @@ parse_params() {
             composerparam="dump-autoload"
             shift
             ;;
-        dc | cade | ca:de | delete:cache) deletecache=1 ;;
+        dc) deletecache=1 ;;
         cc | cacl | ca:cl | clear:cache)
             console=1
             consoleparam="cache:clear"
             ;;
-        pr | plre | pl:re | plugin:refresh)
+        plre | pl:re | plugin:refresh)
             console=1
             consoleparam="plugin:refresh"
             ;;
@@ -274,27 +275,27 @@ parse_params() {
             console=1
             consoleparam="plugin:list"
             ;;
-        pa | plac | pl:ac | plugin:activate)
+        plac | pl:ac | plugin:activate)
             console=1
             consoleparam="plugin:activate ${2-}"
             shift
             ;;
-        pi | plin | pl:in | plugin:install)
+        plin | pl:in | plugin:install)
             console=1
             consoleparam="plugin:install ${2-}"
             shift
             ;;
-        pu | plun | pl:un | plugin:uninstall)
+        plun | pl:un | plugin:uninstall)
             console=1
             consoleparam="plugin:uninstall ${2-}"
             shift
             ;;
-        pd | plde | pl:de | plugin:deactivate)
+        plde | pl:de | plugin:deactivate)
             console=1
             consoleparam="plugin:deactivate ${2-}"
             shift
             ;;
-        dm | dami | da:mi | database:migrate)
+        dami | da:mi | database:migrate)
             console=1
             consoleparam="database:migrate ${2-} --all"
             shift
@@ -450,11 +451,19 @@ fi
 
 # Initialize the project
 if [[ $init == 1 ]]; then
-    echo "Initializing project..."
-    check_file_exists ".project/init.sql.gz"
-    ddev start
-    ddev import-db -f .project/init.sql.gz
-    ddev describe
+    read -p "Initialize DEV Environment it will overwrite db and .env.local (y/n)?" choice
+    case "$choice" in
+    y | Y)
+        echo "Initializing project..."
+        check_file_exists ".project/init.sql.gz"
+        check_file_exists ".project/env.ddev"
+        ddev exec cp .env.ddev .env.local
+        ddev start
+        ddev import-db -f .project/init.sql.gz
+        ddev describe
+        ;;
+    *) usage ;;
+    esac
 fi
 
 # Run tests
