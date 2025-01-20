@@ -240,12 +240,10 @@ parse_params() {
         cup | update)
             composer=1
             composerparam="update"
-            shift
             ;;
         cin | install)
             composer=1
             composerparam="install"
-            shift
             ;;
         cre | require)
             composer=1
@@ -260,7 +258,6 @@ parse_params() {
         cda | dump-autoload)
             composer=1
             composerparam="dump-autoload"
-            shift
             ;;
         dc) deletecache=1 ;;
         cc | cacl | ca:cl | clear:cache)
