@@ -202,7 +202,11 @@ parse_params() {
             shift
             ;;
         e | export) exportdb=1 ;;
-        i | import) importdb=1 ;;
+        i | import)
+            importdb=1
+            importparam="${2}"
+            shift
+            ;;
         s | sequelace) sequelace=1 ;;
         o | launch) launch=1 ;;
         u | up | start) start=1 ;;
@@ -402,8 +406,8 @@ fi
 
 # Import the database
 if [[ $importdb == 1 ]]; then
-    echo "Importing database..."
     [[ -z "${importdbparam-}" ]] && importdbparam=".project/db.sql.gz"
+    echo "Importing database $importdbparam... "
     check_file_exists "$importdbparam"
     ddev import-db -f $importdbparam
 fi
