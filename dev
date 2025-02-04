@@ -201,10 +201,14 @@ parse_params() {
             [[ -z "${buildparam-}" ]] && buildparam="all"
             shift
             ;;
-        e | export) exportdb=1 ;;
+        e | export)
+            exportdb=1
+            exportdbparam="${2}"
+            shift
+            ;;
         i | import)
             importdb=1
-            importparam="${2}"
+            importdbparam="${2}"
             shift
             ;;
         s | sequelace) sequelace=1 ;;
