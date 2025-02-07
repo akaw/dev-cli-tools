@@ -49,6 +49,7 @@ Available options:
 
 Commands and their parameters:
 
+  upgrade                      Upgrade the script to the latest version
   b, build [component]         Build project components: storefront|admin|js|all
   c, composer [command]        Run composer with optional parameter (default: install)
   cup, update                  Composer Update project dependencies
@@ -56,6 +57,7 @@ Commands and their parameters:
   cre, require [command]       Composer Require composer package
   cda, dump-autoload           Composer Dump Autoload
   crm, remove [package]        Composer Remove composer package
+  crs, source [package]        Composer require source
   n, new [project_type]        Create a new project: symfony|shopware
   e, export [sql_file]         Export database (default: .project/db.sql.gz)
   i, import [sql_file]         Import database from .project/db.sql.gz
@@ -72,7 +74,6 @@ Commands and their parameters:
   bk, backup                   Create a backup of the project
   rs, restore [backup_file]    Restore the project from a backup
   p, prune                     Prune unused Docker resources
-  upgrade                      Upgrade the script to the latest version
 
 Shopware Console shortcuts:
   ca:cl                        Clear cache
@@ -195,6 +196,7 @@ parse_params() {
         case "${1-}" in
         -h | --help) usage ;;
         -v | --verbose) set -x ;;
+        s | ssh) ssh=1 ;;
         b | build)
             build=1
             buildparam="${2-}"
@@ -211,7 +213,7 @@ parse_params() {
             importdbparam="${2}"
             shift
             ;;
-        s | sequelace) sequelace=1 ;;
+        se | seq | sequelace) sequelace=1 ;;
         o | launch) launch=1 ;;
         u | up | start) start=1 ;;
         d | down | stop) down=1 ;;
@@ -256,6 +258,11 @@ parse_params() {
         cre | require)
             composer=1
             composerparam="require ${2-}"
+            shift
+            ;;
+        crs | require-source)
+            composer=1
+            composerparam="require ${2-} --require-source"
             shift
             ;;
         crm | remove)
@@ -310,7 +317,6 @@ parse_params() {
             consoleparam="${2-}"
             shift
             ;;
-        ssh) ssh=1 ;;
 
         init) init=1 ;;
         m | mail) mail=1 ;;
