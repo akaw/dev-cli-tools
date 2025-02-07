@@ -260,9 +260,9 @@ parse_params() {
             composerparam="require ${2-}"
             shift
             ;;
-        crs | require-source)
+        cps | prefer-source)
             composer=1
-            composerparam="require ${2-} --require-source"
+            composerparam="require ${2-} --prefer-source"
             shift
             ;;
         crm | remove)
