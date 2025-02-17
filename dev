@@ -191,6 +191,7 @@ parse_params() {
     removeparam=""
     prune=0
     upgrade=0
+    poweroff=0
 
     while :; do
         case "${1-}" in
@@ -200,18 +201,17 @@ parse_params() {
         b | build)
             build=1
             buildparam="${2-}"
-            [[ -z "${buildparam-}" ]] && buildparam="all"
             shift
             ;;
         e | export)
             exportdb=1
-            exportdbparam="${2}"
-            shift
+            exportdbparam="${2-}"
+            [[ -z "${2-}" ]] && exportdbparam=".project/db.sql.gz"
             ;;
         i | import)
             importdb=1
-            importdbparam="${2}"
-            shift
+            importdbparam="${2-}"
+            [[ -z "${2-}" ]] && importdbparam=".project/db.sql.gz"
             ;;
         se | seq | sequelace) sequelace=1 ;;
         o | launch) launch=1 ;;
@@ -233,13 +233,23 @@ parse_params() {
             testparam="${2-}"
             shift
             ;;
-        p | prune) prune=1 ;;
+        prune) prune=1 ;;
+        poweroff) poweroff=1 ;;
         r | restart) restart=1 ;;
-        st | status | info) status=1 ;;
+        st | sta | stat | status | info) status=1 ;;
         bk | backup) backup=1 ;;
         rs | restore)
             restore=1
             restoreparam="${2-}"
+            shift
+            ;;
+        cpa | packages)
+            packages=1
+            packagesparam="false"
+            shift
+            ;;
+        cli | com:list | composer:list)
+            packages=1
             shift
             ;;
         com | composer)
@@ -367,6 +377,11 @@ if [[ $down == 1 ]]; then
     ddev stop
 fi
 
+if [[ $poweroff == 1 ]]; then
+    echo "power off ddev..."
+    ddev poweroff
+fi
+
 # Connect to the project via SSH
 if [[ $ssh == 1 ]]; then
     echo "Connecting to project via SSH..."
@@ -389,6 +404,7 @@ fi
 
 # Build shopware components
 if [[ $build == 1 ]]; then
+    [[ -z "${buildparam-}" ]] && buildparam="all"
     echo "Building project components: $buildparam"
     if [[ $buildparam == "storefront" ]]; then
         ddev exec bin/build-storefront.sh
@@ -409,14 +425,12 @@ fi
 # Export the database
 if [[ $exportdb == 1 ]]; then
     echo "Exporting database..."
-    [[ -z "${exportdbparam-}" ]] && exportdbparam=".project/db.sql.gz"
     check_file_exists "$exportdbparam"
     ddev export-db -f $exportdbparam
 fi
 
 # Import the database
 if [[ $importdb == 1 ]]; then
-    [[ -z "${importdbparam-}" ]] && importdbparam=".project/db.sql.gz"
     echo "Importing database $importdbparam... "
     check_file_exists "$importdbparam"
     ddev import-db -f $importdbparam
@@ -517,6 +531,38 @@ if [[ $prune == 1 ]]; then
     ddev exec docker system prune -f
     echo "Unused Docker resources pruned"
 fi
+
+if [[ $packages == 1 ]]; then
+    local base_dir="./"
+    local vendor_dir="$base_dir/vendor"
+    local plugins_dir="$base_dir/custom/plugins"
+
+    find "$vendor_dir/store.shopware.com" -name "composer.json" -type f -maxdepth 2 | while read -r store_composer_file; do
+        local path=$(dirname "$store_composer_file" | sed "s|$vendor_dir/||")
+        local link_name=$(create_package_name "$path")
+        local link_path="$plugins_dir/$link_name"
+
+        if [ "$packagesparam" = true ]; then
+            # Entfernen Sie vorhandene Links oder Verzeichnisse
+            [ -L "$link_path" ] && unlink "$link_path"
+            [ -d "$link_path" ] && rmdir "$link_path"
+
+            # Erstellen Sie das Symlink
+            ln -s "../../vendor/$path" "$link_path"
+        else
+            echo "$link_name"
+        fi
+    done
+fi
+
+create_package_name() {
+    local path="$1"
+    local vendor=$(echo "$path" | cut -d'/' -f1)
+    local name=$(echo "$path" | cut -d'/' -f2)
+    vendor=$(echo "${vendor^}")
+    name=$(echo "$name" | sed -e 's/-/ /g' -e 's/\b\(.\)/\u\1/g' -e 's/ //g')
+    echo "$vendor$name"
+}
 
 # Upgrade the script
 if [[ $upgrade == 1 ]]; then
