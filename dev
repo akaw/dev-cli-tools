@@ -192,6 +192,8 @@ parse_params() {
     prune=0
     upgrade=0
     poweroff=0
+    packages=0
+    packagesparam=""
 
     while :; do
         case "${1-}" in
