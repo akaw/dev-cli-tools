@@ -61,7 +61,7 @@ Commands and their parameters:
   n, new [project_type]        Create a new project: symfony|shopware
   e, export [sql_file]         Export database (default: .project/db.sql.gz)
   i, import [sql_file]         Import database from .project/db.sql.gz
-  s, sequelace                 Start Sequel Ace and connect to the database
+  seq, sequelace                 Start Sequel Ace and connect to the database
   l, logs                      Print continuous logs
   u, up                        Launch the project
   d, down                      Stop the project
@@ -203,17 +203,20 @@ parse_params() {
         b | build)
             build=1
             buildparam="${2-}"
+            [[ -z "${2-}" ]] && buildparam="all"
             shift
             ;;
         e | export)
             exportdb=1
             exportdbparam="${2-}"
             [[ -z "${2-}" ]] && exportdbparam=".project/db.sql.gz"
+            shift
             ;;
         i | import)
             importdb=1
             importdbparam="${2-}"
             [[ -z "${2-}" ]] && importdbparam=".project/db.sql.gz"
+            shift
             ;;
         se | seq | sequelace) sequelace=1 ;;
         o | launch) launch=1 ;;
@@ -262,10 +265,12 @@ parse_params() {
         cup | update)
             composer=1
             composerparam="update"
+            shift
             ;;
         cin | install)
             composer=1
             composerparam="install"
+            shift
             ;;
         cre | require)
             composer=1
@@ -285,19 +290,23 @@ parse_params() {
         cda | dump-autoload)
             composer=1
             composerparam="dump-autoload"
+            shift
             ;;
         dc) deletecache=1 ;;
         cc | cacl | ca:cl | clear:cache)
             console=1
             consoleparam="cache:clear"
+            shift
             ;;
         plre | pl:re | plugin:refresh)
             console=1
             consoleparam="plugin:refresh"
+            shift
             ;;
         pl | pli | plli | pl:li | plugin:list)
             console=1
             consoleparam="plugin:list"
+            shift
             ;;
         plac | pl:ac | plugin:activate)
             console=1
@@ -340,7 +349,6 @@ parse_params() {
             ;;
         *) break ;;
         esac
-        shift
     done
 
     args=("$@")
