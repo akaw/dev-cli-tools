@@ -2,33 +2,70 @@
 
 # This script provides shortcuts for common ddev, shopware and other tools commands.
 #
+# License: MIT
 # Author: Andre Witte
-#
-# Description: dDEV shortening tools
-# Usage: dev [OPTIONS] [PARAMETERS]
-# Version: 1.0.0
+# Title: dDEV shortening toolbox
+# Description: dDEV shortening toolbox
+# Version: beta #NoRiskNoFun
 # https://github.com/akaw/dev-cli-tools/
+# Usage: dev [OPTIONS] [PARAMETERS]
+
+# It provides shortcuts for common ddev, shopware and other tools commands. It is
+# designed to be a simple and easy-to-use tool for developers working with ddev.
 #
-# Examples:
-#   dev u s l
-#   dev composer install
-#   dev composer require symfony/webpack-encore-bundle
-#   dev composer remove symfony/webpack-encore-bundle
-#   dev composer dump-autoload
-#   dev composer update
-#   dev new symfony
-#   dev new shopware
-#   dev export
-#   dev import
-#   dev sequelace
-#   dev logs
-#   dev up
-#   dev down
-#   dev open
-#   dev xdebug on
-#   dev xdebug off
-#   dev mail
-#   ...
+# The script is designed to be run from the root of a ddev project. It provides
+# shortcuts for common ddev, shopware and other tools commands.
+#
+# Requirements:
+# - ddev
+# - shopware
+# - composer
+# - npm
+# - node
+# - xdebug
+# - sequelace
+#
+# Options:
+#   -h, --help          Print this help and exit
+#   --no-color          Disable colored output
+#   -v, --version       Print the version and exit
+#   -vvv, --verbose     Print script debug info
+#   upgrade             Upgrade the script to the latest version
+#   b [component]       Build project components: storefront|admin|js|all
+#   c [command]         Run composer with optional parameter (default: install)
+#   cup                 Composer Update project dependencies
+#   cin                 Composer Install project dependencies
+#   cre [command]       Composer Require composer package
+#   cda                 Composer Dump Autoload
+#   crm [package]       Composer Remove composer package
+#   crs [package]       Composer require source
+#   cc                  Clear cache
+#   dc                  Delete cache
+#   plre                Refresh plugins
+#   pl                  List plugins
+#   plac                Activate plugin
+#   plin                Install plugin
+#   plun                Uninstall plugin
+#   plde                Deactivate plugin
+#   dami                Database Migrate
+#   init                Initialize the project
+#   n [project_type]    Create a new project: symfony|shopware
+#   e [sql_file]        Export database (default: .project/db.sql.gz)
+#   i [sql_file]        Import database (default: .project/db.sql.gz)
+#   seq                 Start Sequel Ace and connect to the database
+#   l                   Print continuous logs
+#   u                   Launch the project
+#   d                   Stop the project
+#   o                   Open the project in a browser
+#   x [on|off]          Start or stop xdebug: on|off
+#   m                   Launch mail service
+#   t [options]         Run tests with optional parameter
+#   r                   Restart the project
+#   st                  Check the status of the project
+#   bk                  Create a backup of the project
+#   rs [backup_file]    Restore the project from a backup
+#   p                   Prune unused Docker resources
+#   lint                Run linting tools
 
 set -Eeuo pipefail
 trap cleanup SIGINT SIGTERM ERR EXIT
@@ -42,58 +79,62 @@ usage() {
 Usage: $(basename "${BASH_SOURCE[0]}") [OPTIONS] [PARAMETERS]
 Shortcuts for ddev,symfony,shopware and other tools
 
-Available options:
-
-  -h, --help       Print this help and exit
-  --no-color       Disable colored output
-
-Commands and their parameters:
-
-  upgrade                      Upgrade the script to the latest version
-  b, build [component]         Build project components: storefront|admin|js|all
-  c, composer [command]        Run composer with optional parameter (default: install)
-  cup, update                  Composer Update project dependencies
-  cin, install                 Composer Install project dependencies
-  cre, require [command]       Composer Require composer package
-  cda, dump-autoload           Composer Dump Autoload
-  crm, remove [package]        Composer Remove composer package
-  crs, source [package]        Composer require source
-  n, new [project_type]        Create a new project: symfony|shopware
-  e, export [sql_file]         Export database (default: .project/db.sql.gz)
-  i, import [sql_file]         Import database from .project/db.sql.gz
-  seq, sequelace                 Start Sequel Ace and connect to the database
-  l, logs                      Print continuous logs
-  u, up                        Launch the project
-  d, down                      Stop the project
-  o, open                      Open the project in a browser
-  x, xdebug [on|off]           Start or stop xdebug: on|off
-  m, mail                      Launch mail service
-  t, test [options]            Run tests with optional parameter
-  r, restart                   Restart the project
-  st, status, info             Check the status of the project
-  bk, backup                   Create a backup of the project
-  rs, restore [backup_file]    Restore the project from a backup
-  p, prune                     Prune unused Docker resources
-
-Shopware Console shortcuts:
-  ca:cl                        Clear cache
-  cacl                         Clear cache
-  cc                           Clear cache
-  dami                         Database Migrate
-  da:mi                        Database Migrate
-  plre                         Refresh plugins
-  pl:re                        Refresh plugins
-  pl                           List plugins
-  pli                          List plugins
-  plli                         List plugins
-  plac, pl:ac [plugin]         Activate plugin
-  plin, pl:in [plugin]         Install plugin
-  plun, pl:un [plugin]         Uninstall plugin
-  plde, pl:de [plugin]         Deactivate plugin
-  console, con [command]       Execute console command
-
+Options:
+    -h, --help        Print this help and exit
+    --no-color        Disable colored output
+    -v, --version     Print the version and exit
+    -vvv, --verbose   Print script debug info
+    upgrade           Upgrade the script to the latest version
+    b [component]     Build project components: storefront|admin|js|all
+    c [command]       Run composer with optional parameter (default: install)
+    cup               Composer Update project dependencies
+    cin               Composer Install project dependencies
+    cre [command]     Composer Require composer package
+    cda               Composer Dump Autoload
+    crm [package]     Composer Remove composer package
+    crs [package]     Composer require source
+    cc                Clear cache
+    dc                Delete cache
+    plre              Refresh plugins
+    pl                List plugins
+    plac              Activate plugin
+    plin              Install plugin
+    plun              Uninstall plugin
+    plde              Deactivate plugin
+    dami              Database Migrate
+    init              Initialize the project
+    n [project_type]  Create a new project: symfony|shopware
+    e [sql_file]      Export database (default: .project/db.sql.gz)
+    i [sql_file]      Import database from .project/db.sql.gz
+    seq               Start Sequel Ace and connect to the database
+    l                 Print continuous logs
+    u                 Launch the project
+    d                 Stop the project
+    o                 Open the project in a browser
+    x [on|off]        Start or stop xdebug: on|off
+    m                 Launch mail service
+    t [options]       Run tests with optional parameter
+    r                 Restart the project
+    st                Check the status of the project
+    bk                Create a backup of the project
+    rs [backup_file]  Restore the project from a backup
+    p                 Prune unused Docker resources
+    lint              Run linting tools
 EOF
     exit 0
+}
+
+help() {
+    cat <<EOF
+Usage: $(basename "${BASH_SOURCE[0]}") [OPTIONS] [PARAMETERS]
+Shortcuts for ddev,symfony,shopware and other tools
+EOF
+    exit 0
+}
+
+# Display the current version of the script
+version() {
+    echo "dev-cli-tools version beta #NoRiskNoFun"
 }
 
 # Cleanup function to handle script termination
@@ -154,9 +195,9 @@ check_file_exists() {
 parse_params() {
     # default values of variables set from params
     exportdb=0
+    exportdbparam=""
     importdb=0
     importdbparam=""
-    exportdbparam=""
     sequelace=0
     logs=0
     launch=0
@@ -194,63 +235,104 @@ parse_params() {
     poweroff=0
     packages=0
     packagesparam=""
+    prefersource=0
+    prefersourceparam=""
+    version=0
+    lint=0
 
     while :; do
         case "${1-}" in
         -h | --help) usage ;;
-        -v | --verbose) set -x ;;
-        s | ssh) ssh=1 ;;
+        -vvv | --verbose) set -x ;;
+        -v | --version)
+            version
+            shift
+            ;;
+        s | ssh)
+            ssh=1
+            shift
+            ;;
         b | build)
             build=1
             buildparam="${2-}"
-            [[ -z "${2-}" ]] && buildparam="all"
-            shift
+            [[ -z "${buildparam}" ]] && buildparam="all"
+            shift 2
             ;;
         e | export)
             exportdb=1
             exportdbparam="${2-}"
-            [[ -z "${2-}" ]] && exportdbparam=".project/db.sql.gz"
+            [[ -z "${exportdbparam}" ]] && exportdbparam=".project/db.sql.gz"
             shift
             ;;
         i | import)
             importdb=1
             importdbparam="${2-}"
-            [[ -z "${2-}" ]] && importdbparam=".project/db.sql.gz"
+            [[ -z "${importdbparam}" ]] && importdbparam=".project/db.sql.gz"
+            shift 2
+            ;;
+        se | seq | sequelace)
+            sequelace=1
             shift
             ;;
-        se | seq | sequelace) sequelace=1 ;;
-        o | launch) launch=1 ;;
-        u | up | start) start=1 ;;
-        d | down | stop) down=1 ;;
+        o | launch)
+            launch=1
+            shift
+            ;;
+        u | up | start)
+            start=1
+            shift
+            ;;
+        d | down | stop)
+            down=1
+            shift
+            ;;
         n | new)
             new=1
-            newparam="${2}"
+            newparam="${2-}"
+            shift 2
+            ;;
+        l | logs)
+            logs=1
             shift
             ;;
-        l | logs) logs=1 ;;
         x | xdebug)
             xdebug=1
             xdebugparam="${2-}"
-            shift
+            shift 2
             ;;
         t | test)
             test=1
             testparam="${2-}"
+            shift 2
+            ;;
+        p | prune)
+            prune=1
             shift
             ;;
-        prune) prune=1 ;;
-        poweroff) poweroff=1 ;;
-        r | restart) restart=1 ;;
-        st | sta | stat | status | info) status=1 ;;
-        bk | backup) backup=1 ;;
+        poweroff)
+            poweroff=1
+            shift
+            ;;
+        r | restart)
+            restart=1
+            shift
+            ;;
+        st | sta | stat | status | info)
+            status=1
+            shift
+            ;;
+        bk | backup)
+            backup=1
+            shift
+            ;;
         rs | restore)
             restore=1
             restoreparam="${2-}"
-            shift
+            shift 2
             ;;
         cpa | packages)
             packages=1
-            packagesparam="false"
+            packagesparam="true"
             shift
             ;;
         cli | com:list | composer:list)
@@ -260,7 +342,7 @@ parse_params() {
         com | composer)
             composer=1
             composerparam="${2-}"
-            shift
+            shift 2
             ;;
         cup | update)
             composer=1
@@ -275,24 +357,27 @@ parse_params() {
         cre | require)
             composer=1
             composerparam="require ${2-}"
-            shift
+            shift 2
             ;;
-        cps | prefer-source)
-            composer=1
-            composerparam="require ${2-} --prefer-source"
-            shift
+        src | source | prefer-source)
+            prefersource=1
+            prefersourceparam="${2-}"
+            shift 2
             ;;
         crm | remove)
             remove=1
             removeparam="${2-}"
-            shift
+            shift 2
             ;;
         cda | dump-autoload)
             composer=1
             composerparam="dump-autoload"
             shift
             ;;
-        dc) deletecache=1 ;;
+        dc)
+            deletecache=1
+            shift
+            ;;
         cc | cacl | ca:cl | clear:cache)
             console=1
             consoleparam="cache:clear"
@@ -311,38 +396,53 @@ parse_params() {
         plac | pl:ac | plugin:activate)
             console=1
             consoleparam="plugin:activate ${2-}"
-            shift
+            shift 2
             ;;
         plin | pl:in | plugin:install)
             console=1
             consoleparam="plugin:install ${2-}"
-            shift
+            shift 2
             ;;
         plun | pl:un | plugin:uninstall)
             console=1
             consoleparam="plugin:uninstall ${2-}"
-            shift
+            shift 2
             ;;
         plde | pl:de | plugin:deactivate)
             console=1
             consoleparam="plugin:deactivate ${2-}"
-            shift
+            shift 2
             ;;
         dami | da:mi | database:migrate)
             console=1
             consoleparam="database:migrate ${2-} --all"
-            shift
+            shift 2
             ;;
         c | con | console)
             console=1
             consoleparam="${2-}"
+            shift 2
+            ;;
+        init)
+            init=1
             shift
             ;;
-
-        init) init=1 ;;
-        m | mail) mail=1 ;;
-        upgrade) upgrade=1 ;;
-        --no-color) NO_COLOR=1 ;;
+        m | mail)
+            mail=1
+            shift
+            ;;
+        upgrade)
+            upgrade=1
+            shift
+            ;;
+        lint)
+            lint=1
+            shift
+            ;;
+        --no-color)
+            NO_COLOR=1
+            shift
+            ;;
         ?*)
             usage
             die "Unknown option: $1"
@@ -400,16 +500,23 @@ fi
 
 # Run composer commands
 if [[ $composer == 1 ]]; then
-    [[ -z "${composerparam-}" ]] && composerparam=""
     echo "Updating project dependencies..."
     ddev composer $composerparam
     echo "Project dependencies updated"
 fi
 
+# Run composer prefer-source
+if [[ $prefersource == 1 ]]; then
+    [[ -z "${prefersourceparam-}" ]] && die "Please provide a composer package name"
+    echo "Running composer prefer-source for package: $prefersourceparam"
+    ddev composer remove $prefersourceparam
+    ddev composer require $prefersourceparam --prefer-source
+fi
+
 # Execute console commands
 if [[ $console == 1 ]]; then
     echo "Executing console command: $consoleparam"
-    ddev exec php bin/console $consoleparam
+    ddev exec console $consoleparam
 fi
 
 # Build shopware components
@@ -435,7 +542,6 @@ fi
 # Export the database
 if [[ $exportdb == 1 ]]; then
     echo "Exporting database..."
-    check_file_exists "$exportdbparam"
     ddev export-db -f $exportdbparam
 fi
 
@@ -542,6 +648,12 @@ if [[ $prune == 1 ]]; then
     echo "Unused Docker resources pruned"
 fi
 
+# Run linting tools
+if [[ $lint == 1 ]]; then
+    echo "Running linting tools..."
+    ddev exec npm run lint
+fi
+
 if [[ $packages == 1 ]]; then
     local base_dir="./"
     local vendor_dir="$base_dir/vendor"
@@ -557,7 +669,7 @@ if [[ $packages == 1 ]]; then
             [ -L "$link_path" ] && unlink "$link_path"
             [ -d "$link_path" ] && rmdir "$link_path"
 
-            # Erstellen Sie das Symlink
+            # Erstellen Sie den Symlink
             ln -s "../../vendor/$path" "$link_path"
         else
             echo "$link_name"
