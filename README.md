@@ -86,7 +86,7 @@ The script offers a variety of commands and options. Here are some examples:
 - Export the database:
     ```bash
     ddev export-db -f .project/db.sql.gz
-    ddev e [file]
+    dev e [file]
     dev export
     dev e
     ```
@@ -94,7 +94,7 @@ The script offers a variety of commands and options. Here are some examples:
 - Import the database:
     ```bash
     ddev import-db -f .project/db.sql.gz
-    ddev i [file]
+    dev i [file]
     dev import
     dev i
     ```
