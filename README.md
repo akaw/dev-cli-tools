@@ -6,12 +6,12 @@
 
 ## Installation
 
-2. Download the script:
+1. Download the script:
     ```bash
     curl -o ~/.bin https://raw.githubusercontent.com/akaw/dev-cli-tools/refs/heads/main/dev
     ```
 
-3. Make the script executable:
+2. Make the script executable:
     ```bash
     chmod +x ~/.bin
     ```
@@ -127,14 +127,37 @@ To update the script to the latest version, use the following command:
 dev upgrade
 ```
 
-## Help
+## Integration in Your Console
 
-For a complete list of available commands and options, run the following command:
-```bash
-dev --help
-```
+1. Create the `~/.bin` directory if it doesn't exist:
+    ```bash
+    mkdir -p ~/.bin
+    ```
+
+2. Download the script and save it in the `~/.bin` directory:
+    ```bash
+    curl -o ~/.bin/dev https://raw.githubusercontent.com/akaw/dev-cli-tools/refs/heads/main/dev
+    ```
+
+3. Make the script executable:
+    ```bash
+    chmod +x ~/.bin/dev
+    ```
+
+4. Add the following line to your `.bashrc` or `.zshrc` file to add the `~/.bin` directory to your `PATH`:
+    ```bash
+    export PATH="$PATH:~/.bin"
+    ```
+
+5. Reload your shell configuration file to apply the changes:
+    ```bash
+    source ~/.bashrc
+    # or
+    source ~/.zshrc
+    ```
+
+This will allow you to use the `dev` command from any directory in your terminal.
 
 ## Author
 
 andre.witte@freenet.de
-
