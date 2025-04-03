@@ -2,70 +2,35 @@
 
 # This script provides shortcuts for common ddev, shopware and other tools commands.
 #
-# License: MIT
 # Author: Andre Witte
-# Title: dDEV shortening toolbox
-# Description: dDEV shortening toolbox
-# Version: beta #NoRiskNoFun
-# https://github.com/akaw/dev-cli-tools/
+#
+# Description: dDEV shortening tools
 # Usage: dev [OPTIONS] [PARAMETERS]
+# Version: 1.0.0
+# https://github.com/akaw/dev-cli-tools/
+#
+# Examples:
+#   dev u s l
+#   dev composer install
+#   dev composer require symfony/webpack-encore-bundle
+#   dev composer remove symfony/webpack-encore-bundle
+#   dev composer dump-autoload
+#   dev composer update
+#   dev new symfony
+#   dev new shopware
+#   dev export
+#   dev import
+#   dev sequelace
+#   dev logs
+#   dev up
+#   dev down
+#   dev open
+#   dev xdebug on
+#   dev xdebug off
+#   dev mail
+#   ...
 
-# It provides shortcuts for common ddev, shopware and other tools commands. It is
-# designed to be a simple and easy-to-use tool for developers working with ddev.
-#
-# The script is designed to be run from the root of a ddev project. It provides
-# shortcuts for common ddev, shopware and other tools commands.
-#
-# Requirements:
-# - ddev
-# - shopware
-# - composer
-# - npm
-# - node
-# - xdebug
-# - sequelace
-#
-# Options:
-#   -h, --help          Print this help and exit
-#   --no-color          Disable colored output
-#   -v, --version       Print the version and exit
-#   -vvv, --verbose     Print script debug info
-#   upgrade             Upgrade the script to the latest version
-#   b [component]       Build project components: storefront|admin|js|all
-#   c [command]         Run composer with optional parameter (default: install)
-#   cup                 Composer Update project dependencies
-#   cin                 Composer Install project dependencies
-#   cre [command]       Composer Require composer package
-#   cda                 Composer Dump Autoload
-#   crm [package]       Composer Remove composer package
-#   crs [package]       Composer require source
-#   cc                  Clear cache
-#   dc                  Delete cache
-#   plre                Refresh plugins
-#   pl                  List plugins
-#   plac                Activate plugin
-#   plin                Install plugin
-#   plun                Uninstall plugin
-#   plde                Deactivate plugin
-#   dami                Database Migrate
-#   init                Initialize the project
-#   n [project_type]    Create a new project: symfony|shopware
-#   e [sql_file]        Export database (default: .project/db.sql.gz)
-#   i [sql_file]        Import database (default: .project/db.sql.gz)
-#   seq                 Start Sequel Ace and connect to the database
-#   l                   Print continuous logs
-#   u                   Launch the project
-#   d                   Stop the project
-#   o                   Open the project in a browser
-#   x [on|off]          Start or stop xdebug: on|off
-#   m                   Launch mail service
-#   t [options]         Run tests with optional parameter
-#   r                   Restart the project
-#   st                  Check the status of the project
-#   bk                  Create a backup of the project
-#   rs [backup_file]    Restore the project from a backup
-#   p                   Prune unused Docker resources
-#   lint                Run linting tools
+DOCKER_ENVIRONMENT="orbstack" # or docker
 
 set -Eeuo pipefail
 trap cleanup SIGINT SIGTERM ERR EXIT
@@ -79,55 +44,57 @@ usage() {
 Usage: $(basename "${BASH_SOURCE[0]}") [OPTIONS] [PARAMETERS]
 Shortcuts for ddev,symfony,shopware and other tools
 
-Options:
-    -h, --help        Print this help and exit
-    --no-color        Disable colored output
-    -v, --version     Print the version and exit
-    -vvv, --verbose   Print script debug info
-    upgrade           Upgrade the script to the latest version
-    b [component]     Build project components: storefront|admin|js|all
-    c [command]       Run composer with optional parameter (default: install)
-    cup               Composer Update project dependencies
-    cin               Composer Install project dependencies
-    cre [command]     Composer Require composer package
-    cda               Composer Dump Autoload
-    crm [package]     Composer Remove composer package
-    crs [package]     Composer require source
-    cc                Clear cache
-    dc                Delete cache
-    plre              Refresh plugins
-    pl                List plugins
-    plac              Activate plugin
-    plin              Install plugin
-    plun              Uninstall plugin
-    plde              Deactivate plugin
-    dami              Database Migrate
-    init              Initialize the project
-    n [project_type]  Create a new project: symfony|shopware
-    e [sql_file]      Export database (default: .project/db.sql.gz)
-    i [sql_file]      Import database from .project/db.sql.gz
-    seq               Start Sequel Ace and connect to the database
-    l                 Print continuous logs
-    u                 Launch the project
-    d                 Stop the project
-    o                 Open the project in a browser
-    x [on|off]        Start or stop xdebug: on|off
-    m                 Launch mail service
-    t [options]       Run tests with optional parameter
-    r                 Restart the project
-    st                Check the status of the project
-    bk                Create a backup of the project
-    rs [backup_file]  Restore the project from a backup
-    p                 Prune unused Docker resources
-    lint              Run linting tools
-EOF
-    exit 0
-}
+Available options:
 
-help() {
-    cat <<EOF
-Usage: $(basename "${BASH_SOURCE[0]}") [OPTIONS] [PARAMETERS]
-Shortcuts for ddev,symfony,shopware and other tools
+  -h, --help       Print this help and exit
+  --no-color       Disable colored output
+
+Commands and their parameters:
+
+  upgrade                      Upgrade the script to the latest version
+  b, build [component]         Build project components: storefront|admin|js|all
+  c, composer [command]        Run composer with optional parameter (default: install)
+  cup, update                  Composer Update project dependencies
+  cin, install                 Composer Install project dependencies
+  cre, require [command]       Composer Require composer package
+  cda, dump-autoload           Composer Dump Autoload
+  crm, remove [package]        Composer Remove composer package
+  crs, source [package]        Composer require source
+  n, new [project_type]        Create a new project: symfony|shopware
+  e, export [sql_file]         Export database (default: .project/db.sql.gz)
+  i, import [sql_file]         Import database from .project/db.sql.gz
+  seq, sequelace                 Start Sequel Ace and connect to the database
+  l, logs                      Print continuous logs
+  u, up                        Launch the project
+  d, down                      Stop the project
+  o, open                      Open the project in a browser
+  x, xdebug [on|off]           Start or stop xdebug: on|off
+  m, mail                      Launch mail service
+  t, test [options]            Run tests with optional parameter
+  r, restart                   Restart the project
+  st, status, info             Check the status of the project
+  bk, backup                   Create a backup of the project
+  rs, restore [backup_file]    Restore the project from a backup
+  p, prune                     Prune unused Docker resources
+  lint                        Run linting tools
+
+Shopware Console shortcuts:
+  ca:cl                        Clear cache
+  cacl                         Clear cache
+  cc                           Clear cache
+  dami                         Database Migrate
+  da:mi                        Database Migrate
+  plre                         Refresh plugins
+  pl:re                        Refresh plugins
+  pl                           List plugins
+  pli                          List plugins
+  plli                         List plugins
+  plac, pl:ac [plugin]         Activate plugin
+  plin, pl:in [plugin]         Install plugin
+  plun, pl:un [plugin]         Uninstall plugin
+  plde, pl:de [plugin]         Deactivate plugin
+  console, con [command]       Execute console command
+
 EOF
     exit 0
 }
@@ -167,9 +134,10 @@ die() {
 
 # Default function to start the development environment
 # This function is called when no arguments are provided
-# u = up, s = sequelace, l = logs, o = open
+# u = up, seq = sequelace, l = logs, o = open in browser
 default() {
-    dev u s o info
+    start_docker_environment # Wartezeit, um sicherzustellen, dass das Environment vollständig gestartet ist
+    dev u seq o info
 }
 
 # Function to upgrade the script
@@ -188,6 +156,62 @@ check_file_exists() {
     local file_path="$1"
     if [[ ! -f "$file_path" ]]; then
         die "File not found: $file_path"
+    fi
+}
+
+# Function to decide whether to start OrbStack or Docker based on an environment variable and OS type
+start_docker_environment() {
+    if [[ "${DOCKER_ENVIRONMENT:-}" == "orbstack" ]]; then
+        local os_type
+        os_type=$(uname -s)
+
+        if [[ "$os_type" == "Darwin" ]]; then
+            # macOS
+            if launchctl list | grep -q "com.orbstack.OrbStack"; then
+                echo "Starting OrbStack environment..."
+                open -ga /Applications/OrbStack.app
+                sleep 3
+            else
+                echo "Orbstack is running"
+            fi
+        elif [[ "$os_type" == "Linux" ]]; then
+            # Linux
+            if pgrep -x "OrbStack" >/dev/null; then
+                echo "Starting OrbStack environment..."
+                orbstack start
+                sleep 3
+            else
+                echo "Orbstack is running"
+            fi
+        else
+            die "Unsupported OS: $os_type"
+        fi
+    elif [[ "${DOCKER_ENVIRONMENT:-}" == "docker" ]]; then
+        local os_type
+        os_type=$(uname -s)
+
+        if [[ "$os_type" == "Darwin" ]]; then
+            # macOS
+            if launchctl list | grep -q "com.docker.docker"; then
+                echo "Starting Docker Desktop environment..."
+                open -ga "Docker"
+                sleep 3
+            else
+                die "Docker Desktop is not running. Please start Docker Desktop first."
+            fi
+        elif [[ "$os_type" == "Linux" ]]; then
+            # Linux
+            if systemctl is-active --quiet docker; then
+                echo "Docker service is already running."
+            else
+                echo "Starting Docker service..."
+                sudo systemctl start docker
+            fi
+        else
+            die "Unsupported OS: $os_type"
+        fi
+    else
+        die "Unknown or unset DOCKER_ENVIRONMENT. Please set it to 'orbstack' or 'docker'."
     fi
 }
 
@@ -287,9 +311,16 @@ parse_params() {
             shift
             ;;
         n | new)
-            new=1
-            newparam="${2-}"
-            shift 2
+            read -p "Create new project (y/n)?" choice
+            case "$choice" in
+            y | Y)
+                new=1
+                newparam="${2-}"
+                shift 2
+                ;;
+            *) usage ;;
+            esac
+            exit 1
             ;;
         l | logs)
             logs=1
@@ -305,7 +336,7 @@ parse_params() {
             testparam="${2-}"
             shift 2
             ;;
-        p | prune)
+        prune)
             prune=1
             shift
             ;;
@@ -463,11 +494,7 @@ fi
 
 # Prompt user to start DEV environment if no arguments are provided
 if [ $# -eq 0 ]; then
-    read -p "Start DEV Environment (y/n)?" choice
-    case "$choice" in
-    y | Y) default ;;
-    *) usage ;;
-    esac
+    default
     exit 1
 fi
 parse_params "$@"
@@ -477,8 +504,6 @@ setup_colors
 if [[ $start == 1 ]]; then
     echo "Starting project..."
     ddev start
-    ddev describe
-
 fi
 
 # Stop the project
