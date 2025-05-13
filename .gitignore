@@ -1,0 +1,14 @@
+# Logs
+*.log
+dev.log
+
+# Environment
+.env
+
+# Project specific
+.project/*
+!.project/.gitkeep
+
+# IDE
+.idea/
+.vscode/

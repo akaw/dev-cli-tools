@@ -31,77 +31,150 @@
 #   ...
 
 DOCKER_ENVIRONMENT="orbstack" # or docker
+OS=$(uname -s)
 
 set -Eeuo pipefail
 trap cleanup SIGINT SIGTERM ERR EXIT
 
+CONFIG_FILE="config.env"
+source "${CONFIG_FILE}" 2>/dev/null || echo "No configuration found"
+
+# Log level
+log_level=1
+log() {
+    if [[ $log_level -ge 1 ]]; then
+        echo -e "\033[1;32m[$(date '+%Y-%m-%d %H:%M:%S')] $1\033[0m"
+    fi
+}
+error() {
+    log "ERROR: $1"
+    exit 1
+}
+
 # script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd -P)
 # ScriptDir: "$script_dir"
+
+# Define script directory and version
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd -P)
+VERSION=$(cat "${SCRIPT_DIR}/VERSION" 2>/dev/null || echo "unknown")
+
+# Logging Konfiguration
+LOG_FILE="${SCRIPT_DIR}/dev.log"
+LOG_LEVEL=${LOG_LEVEL:-"INFO"} # DEBUG, INFO, WARN, ERROR
+
+# Erweiterte Farbdefinitionen
+declare -A COLORS=(
+    [RESET]='\033[0m'
+    [BOLD]='\033[1m'
+    [DIM]='\033[2m'
+    [ITALIC]='\033[3m'
+    [DEBUG]='\033[0;36m'     # Cyan
+    [INFO]='\033[0;32m'      # Grün
+    [WARN]='\033[0;33m'      # Gelb
+    [ERROR]='\033[0;31m'     # Rot
+    [TIMESTAMP]='\033[0;90m' # Hellgrau
+)
+
+# Verbesserte Log-Funktion
+log() {
+    local level=$1
+    local message=$2
+    local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+
+    # Prüfe ob Logging für dieses Level aktiviert ist
+    [[ $level == "DEBUG" && $LOG_LEVEL != "DEBUG" ]] && return
+
+    # Formatierte Ausgabe
+    local output="${COLORS[TIMESTAMP]}${timestamp}${COLORS[RESET]} "
+    output+="${COLORS[BOLD]}${COLORS[$level]}${level}${COLORS[RESET]} "
+    output+="${message}"
+
+    # Console Output mit Formatierung
+    echo -e "$output"
+
+    # File Output ohne Formatierung
+    echo "[${timestamp}] ${level}: ${message}" >>"${LOG_FILE}"
+}
+
+# Spezifische Logging-Funktionen
+debug() { log "DEBUG" "$1"; }
+info() { log "INFO" "$1"; }
+warn() { log "WARN" "$1"; }
+error() { log "ERROR" "$1" >&2; }
+
+# Ersetze die alte die() Funktion
+die() {
+    error "$1"
+    exit "${2:-1}"
+}
 
 # Display usage information
 usage() {
     cat <<EOF
-Usage: $(basename "${BASH_SOURCE[0]}") [OPTIONS] [PARAMETERS]
-Shortcuts for ddev,symfony,shopware and other tools
+$(basename "${BASH_SOURCE[0]}") - Development Command Line Tools v${VERSION}
 
-Available options:
+USAGE:
+    $(basename "${BASH_SOURCE[0]}") [OPTION] COMMAND [ARGS]
 
-  -h, --help       Print this help and exit
-  --no-color       Disable colored output
+OPTIONS:
+    -h,  --help            Show this help
+    -v,  --version         Show version
+         --no-color        Disable colored output
 
-Commands and their parameters:
+PROJECT:
+    u,   up               Start project
+    d,   down            Stop project
+    r,   restart         Restart project
+    st,  status          Show project status
+    o,   open            Open in browser
+    init                 Initialize project
 
-  upgrade                      Upgrade the script to the latest version
-  b, build [component]         Build project components: storefront|admin|js|all
-  c, composer [command]        Run composer with optional parameter (default: install)
-  cup, update                  Composer Update project dependencies
-  cin, install                 Composer Install project dependencies
-  cre, require [command]       Composer Require composer package
-  cda, dump-autoload           Composer Dump Autoload
-  crm, remove [package]        Composer Remove composer package
-  crs, source [package]        Composer require source
-  n, new [project_type]        Create a new project: symfony|shopware
-  e, export [sql_file]         Export database (default: .project/db.sql.gz)
-  i, import [sql_file]         Import database from .project/db.sql.gz
-  seq, sequelace                 Start Sequel Ace and connect to the database
-  l, logs                      Print continuous logs
-  u, up                        Launch the project
-  d, down                      Stop the project
-  o, open                      Open the project in a browser
-  x, xdebug [on|off]           Start or stop xdebug: on|off
-  m, mail                      Launch mail service
-  t, test [options]            Run tests with optional parameter
-  r, restart                   Restart the project
-  st, status, info             Check the status of the project
-  bk, backup                   Create a backup of the project
-  rs, restore [backup_file]    Restore the project from a backup
-  p, prune                     Prune unused Docker resources
-  lint                        Run linting tools
+DATABASE:
+    e,   export [file]   Export database (.project/db.sql.gz)
+    i,   import [file]   Import database
+    seq, sequelace       Start Sequel Ace
+    da:mi                Run database migrations
 
-Shopware Console shortcuts:
-  ca:cl                        Clear cache
-  cacl                         Clear cache
-  cc                           Clear cache
-  dami                         Database Migrate
-  da:mi                        Database Migrate
-  plre                         Refresh plugins
-  pl:re                        Refresh plugins
-  pl                           List plugins
-  pli                          List plugins
-  plli                         List plugins
-  plac, pl:ac [plugin]         Activate plugin
-  plin, pl:in [plugin]         Install plugin
-  plun, pl:un [plugin]         Uninstall plugin
-  plde, pl:de [plugin]         Deactivate plugin
-  console, con [command]       Execute console command
+DEVELOPMENT:
+    x,   xdebug         Enable/disable xdebug (on|off)
+    t,   test           Run tests [options]
+    l,   logs           Show logs
+    m,   mail           Start mail server
 
+COMPOSER:
+    c,   composer       Run composer command
+    cup, update         Update dependencies
+    cin, install        Install dependencies
+    cre, require        Add package [pkg]
+    crm, remove         Remove package [pkg]
+    cda                 Update autoloader
+
+SHOPWARE:
+    b,   build [comp]   Build components (storefront|admin|js)
+    w,   watch [comp]   Watch components
+    cc                  Clear cache
+    pl:re               Refresh plugins
+    pl:li               List plugins
+    pl:ac [plugin]      Activate plugin
+    pl:de [plugin]      Deactivate plugin
+
+PROJECT:
+    n,   new [type]     Create new project (symfony|shopware)
+    bk,  backup         Create backup
+    rs,  restore        Restore backup
+    upgrade             Update script
+
+Examples:
+    dev up                 Start project
+    dev composer install   Install dependencies
+    dev new shopware       Create new Shopware project
 EOF
     exit 0
 }
 
-# Display the current version of the script
+# Einfache Versionierung und Meldungsausgabe
 version() {
-    echo "dev-cli-tools version beta #NoRiskNoFun"
+    echo "Version: ${VERSION}"
 }
 
 # Cleanup function to handle script termination
@@ -110,44 +183,52 @@ cleanup() {
     # script cleanup here
 }
 
-# Setup colors for terminal output
+# Vereinfachte Farbausgabe
 setup_colors() {
-    if [[ -t 2 ]] && [[ -z "${NO_COLOR-}" ]] && [[ "${TERM-}" != "dumb" ]]; then
-        NOFORMAT='\033[0m' RED='\033[0;31m' GREEN='\033[0;32m' ORANGE='\033[0;33m' BLUE='\033[0;34m' PURPLE='\033[0;35m' CYAN='\033[0;36m' YELLOW='\033[1;33m'
-    else
-        NOFORMAT='' RED='' GREEN='' ORANGE='' BLUE='' PURPLE='' CYAN='' YELLOW=''
-    fi
+    NOFORMAT='\033[0m'
+    RED='\033[0;31m'
+    GREEN='\033[0;32m'
+    YELLOW='\033[1;33m'
 }
 
-# Print a message to stderr
+# Einfache Meldungsausgabe
 msg() {
-    echo >&2 -e "${1-}"
-}
-
-# Print a message to stderr and exit with a given code
-die() {
-    local msg=$1
-    local code=${2-1}
-    msg "$msg"
-    exit "$code"
+    echo "$1"
 }
 
 # Default function to start the development environment
 # This function is called when no arguments are provided
 # u = up, seq = sequelace, l = logs, o = open in browser
 default() {
-    start_docker_environment # Wartezeit, um sicherzustellen, dass das Environment vollständig gestartet ist
-    dev u seq o info
+    start_docker_environment
+    sleep 3
+    dev u
+    dev info
+    dev seq
+    dev o
+    code .
 }
 
 # Function to upgrade the script
 upgrade() {
-    local url="https://raw.githubusercontent.com/akaw/dev-cli-tools/refs/heads/main/dev"
     local script_path="${BASH_SOURCE[0]}"
-    echo "Downloading the latest version of the script..."
-    curl -o "$script_path" "$url"
-    chmod +x "$script_path"
-    echo "Upgrade complete."
+    echo "Loading latest version..."
+
+    # Create backup
+    cp "$script_path" "${script_path}.backup"
+
+    if curl -o "$script_path" "https://raw.githubusercontent.com/akaw/dev-cli-tools/main/dev" &&
+        curl -o "${SCRIPT_DIR}/VERSION" "https://raw.githubusercontent.com/akaw/dev-cli-tools/main/VERSION"; then
+        chmod +x "$script_path"
+        echo "Update successful!"
+        echo "New version: $(cat ${SCRIPT_DIR}/VERSION)"
+    else
+        echo "Update failed. Restoring backup..."
+        mv "${script_path}.backup" "$script_path"
+        exit 1
+    fi
+
+    rm -f "${script_path}.backup"
     exit 0
 }
 
@@ -162,19 +243,16 @@ check_file_exists() {
 # Function to decide whether to start OrbStack or Docker based on an environment variable and OS type
 start_docker_environment() {
     if [[ "${DOCKER_ENVIRONMENT:-}" == "orbstack" ]]; then
-        local os_type
-        os_type=$(uname -s)
-
-        if [[ "$os_type" == "Darwin" ]]; then
+        if [[ "$OS" == "Darwin" ]]; then
             # macOS
-            if launchctl list | grep -q "com.orbstack.OrbStack"; then
+            if ! launchctl list | grep -q "com.orbstack.OrbStack"; then
                 echo "Starting OrbStack environment..."
                 open -ga /Applications/OrbStack.app
                 sleep 3
             else
                 echo "Orbstack is running"
             fi
-        elif [[ "$os_type" == "Linux" ]]; then
+        elif [[ "$OS" == "Linux" ]]; then
             # Linux
             if pgrep -x "OrbStack" >/dev/null; then
                 echo "Starting OrbStack environment..."
@@ -184,22 +262,19 @@ start_docker_environment() {
                 echo "Orbstack is running"
             fi
         else
-            die "Unsupported OS: $os_type"
+            die "Unsupported OS: $OS"
         fi
     elif [[ "${DOCKER_ENVIRONMENT:-}" == "docker" ]]; then
-        local os_type
-        os_type=$(uname -s)
-
-        if [[ "$os_type" == "Darwin" ]]; then
+        if [[ "$OS" == "Darwin" ]]; then
             # macOS
-            if launchctl list | grep -q "com.docker.docker"; then
+            if ! launchctl list | grep -q "com.docker.docker"; then
                 echo "Starting Docker Desktop environment..."
                 open -ga "Docker"
                 sleep 3
             else
                 die "Docker Desktop is not running. Please start Docker Desktop first."
             fi
-        elif [[ "$os_type" == "Linux" ]]; then
+        elif [[ "$OS" == "Linux" ]]; then
             # Linux
             if systemctl is-active --quiet docker; then
                 echo "Docker service is already running."
@@ -208,7 +283,7 @@ start_docker_environment() {
                 sudo systemctl start docker
             fi
         else
-            die "Unsupported OS: $os_type"
+            die "Unsupported OS: $OS"
         fi
     else
         die "Unknown or unset DOCKER_ENVIRONMENT. Please set it to 'orbstack' or 'docker'."
@@ -263,6 +338,9 @@ parse_params() {
     prefersourceparam=""
     version=0
     lint=0
+    watch=0
+    launch=0
+    launchparam=""
 
     while :; do
         case "${1-}" in
@@ -273,14 +351,24 @@ parse_params() {
             shift
             ;;
         s | ssh)
-            ssh=1
+            echo "Connecting to project via SSH..."
+            ddev ssh
             shift
             ;;
-        b | build)
+        ba | build:administration)
             build=1
-            buildparam="${2-}"
-            [[ -z "${buildparam}" ]] && buildparam="all"
-            shift 2
+            buildparam="administration"
+            shift
+            ;;
+        bs | build:storefront)
+            build=1
+            buildparam="storefront"
+            shift
+            ;;
+        bj | build:js | all)
+            build=1
+            buildparam="js"
+            shift
             ;;
         e | export)
             exportdb=1
@@ -295,40 +383,68 @@ parse_params() {
             shift 2
             ;;
         se | seq | sequelace)
-            sequelace=1
+            echo "Starting Sequel Ace..."
+            ddev sequelace
+            shift
+            ;;
+        l)
+            echo "Printing continuous logs..."
+            tail -f ./var/log/dev-$(date '+%Y-%m-%d').log
             shift
             ;;
         o | launch)
-            launch=1
-            shift
+            if [[ -z "${2-}" ]]; then
+                echo "Open default project webpage..."
+                ddev launch
+                shift
+            else
+                echo "Open ${2-}"
+                ddev launch ${2-}
+                shift 2
+            fi
             ;;
         u | up | start)
-            start=1
+            echo "Starting project..."
+            ddev start
             shift
             ;;
         d | down | stop)
-            down=1
+            echo "Stopping project..."
+            ddev stop
+            shift
+            ;;
+        dr | de:ro | debug:router)
+            console=1
+            consoleparam="debug:router"
             shift
             ;;
         n | new)
-            read -p "Create new project (y/n)?" choice
-            case "$choice" in
-            y | Y)
-                new=1
-                newparam="${2-}"
-                shift 2
+            new=1
+            newparam="${2-}"
+            if [[ -z "${newparam}" ]]; then
+                read -p "Please provide project type (symfony|shopware): " newparam
+            fi
+            case "$newparam" in
+            symfony | sy | sym)
+                newparam="symfony"
                 ;;
-            *) usage ;;
+            shopware | sw | sh | sho | shop)
+                newparam="shopware"
+                ;;
+            *)
+                die "Unknown project type: $newparam. Use symfony or shopware"
+                ;;
             esac
-            exit 1
+            shift
             ;;
-        l | logs)
-            logs=1
+        logs)
+            echo "Printing continuous logs..."
+            ddev logs -f
             shift
             ;;
         x | xdebug)
-            xdebug=1
-            xdebugparam="${2-}"
+            [[ -z "${xdebugparam-}" ]] && xdebugparam="on"
+            ddev xdebug ${2-}
             shift 2
             ;;
         t | test)
@@ -336,20 +452,18 @@ parse_params() {
             testparam="${2-}"
             shift 2
             ;;
-        prune)
-            prune=1
-            shift
-            ;;
         poweroff)
-            poweroff=1
+            echo "power off ddev..."
+            ddev poweroff
             shift
             ;;
         r | restart)
-            restart=1
+            echo "Restarting project..."
+            ddev restart
             shift
             ;;
         st | sta | stat | status | info)
-            status=1
+            ddev describe
             shift
             ;;
         bk | backup)
@@ -405,13 +519,20 @@ parse_params() {
             composerparam="dump-autoload"
             shift
             ;;
-        dc)
-            deletecache=1
+        cd | cade | ca:de | cache:delete)
+            echo "Deleting cache..."
+            ddev exec rm -rf var/cache/dev*
+            ddev exec rm -rf var/cache/prod*
             shift
             ;;
-        cc | cacl | ca:cl | clear:cache)
+        cc | cacl | ca:cl | cache:clear)
             console=1
             consoleparam="cache:clear"
+            shift
+            ;;
+        mc | meco | me:co | messenger:consume)
+            console=1
+            consoleparam="messenger:consume"
             shift
             ;;
         plre | pl:re | plugin:refresh)
@@ -439,6 +560,11 @@ parse_params() {
             consoleparam="plugin:uninstall ${2-}"
             shift 2
             ;;
+        plup | pl:up | plugin:update)
+            console=1
+            consoleparam="plugin:update ${2-}"
+            shift 2
+            ;;
         plde | pl:de | plugin:deactivate)
             console=1
             consoleparam="plugin:deactivate ${2-}"
@@ -446,8 +572,28 @@ parse_params() {
             ;;
         dami | da:mi | database:migrate)
             console=1
-            consoleparam="database:migrate ${2-} --all"
+            consoleparam="database:migrate ${2-}"
             shift 2
+            ;;
+        damiall | da:mi:all | database:migrate:all)
+            console=1
+            consoleparam="database:migrate --all"
+            shift
+            ;;
+        w | watch)
+            watch=1
+            watchparam="${2-}"
+            shift 2
+            ;;
+        wa | wa:ad | watch:administration)
+            watch=1
+            watchparam="administration"
+            shift
+            ;;
+        ws | wa:st | watch:storefront)
+            watch=1
+            watchparam="storefront"
+            shift
             ;;
         c | con | console)
             console=1
@@ -463,11 +609,12 @@ parse_params() {
             shift
             ;;
         upgrade)
-            upgrade=1
+            upgrade
             shift
             ;;
         lint)
-            lint=1
+            echo "Running linting tools..."
+            ddev exec npm run lint
             shift
             ;;
         --no-color)
@@ -500,27 +647,10 @@ fi
 parse_params "$@"
 setup_colors
 
-# Start the project
-if [[ $start == 1 ]]; then
-    echo "Starting project..."
-    ddev start
-fi
-
-# Stop the project
-if [[ $down == 1 ]]; then
-    echo "Stopping project..."
-    ddev stop
-fi
-
-if [[ $poweroff == 1 ]]; then
-    echo "power off ddev..."
-    ddev poweroff
-fi
-
-# Connect to the project via SSH
-if [[ $ssh == 1 ]]; then
-    echo "Connecting to project via SSH..."
-    ddev ssh
+# Execute console commands
+if [[ $console == 1 ]]; then
+    echo "Executing console command: $consoleparam"
+    ddev exec console $consoleparam
 fi
 
 # Run composer commands
@@ -538,29 +668,28 @@ if [[ $prefersource == 1 ]]; then
     ddev composer require $prefersourceparam --prefer-source
 fi
 
-# Execute console commands
-if [[ $console == 1 ]]; then
-    echo "Executing console command: $consoleparam"
-    ddev exec console $consoleparam
-fi
-
 # Build shopware components
 if [[ $build == 1 ]]; then
-    [[ -z "${buildparam-}" ]] && buildparam="all"
     echo "Building project components: $buildparam"
     if [[ $buildparam == "storefront" ]]; then
         ddev exec bin/build-storefront.sh
     fi
-    if [[ $buildparam == "admin" ]]; then
+    if [[ $buildparam == "administration" ]]; then
         ddev exec bin/build-administration.sh
     fi
     if [[ $buildparam == "js" ]]; then
         ddev exec bin/build-js.sh
     fi
-    if [[ $buildparam == "all" ]]; then
-        ddev exec bin/build-administration.sh
-        ddev exec bin/build-storefront.sh
-        ddev exec bin/build-js.sh
+fi
+
+if [[ $watch == 1 ]]; then
+    if [[ -z "${watchparam}" || $watchparam == "storefront" || $watchparam == "store" || $watchparam == "s" ]]; then
+        echo "watching storefront"
+        ddev exec bin/watch-storefront.sh
+    fi
+    if [[ $watchparam == "administration" || $watchparam == "admin" || $watchparam == "a" ]]; then
+        echo "watching administration"
+        ddev exec bin/watch-administration.sh
     fi
 fi
 
@@ -575,44 +704,6 @@ if [[ $importdb == 1 ]]; then
     echo "Importing database $importdbparam... "
     check_file_exists "$importdbparam"
     ddev import-db -f $importdbparam
-fi
-
-# Start Sequel Ace
-if [[ $sequelace == 1 ]]; then
-    echo "Starting Sequel Ace..."
-    ddev sequelace
-fi
-
-# Toggle xdebug
-if [[ $xdebug == 1 ]]; then
-    echo "Toggling xdebug: $xdebugparam"
-    [[ -z "${xdebugparam-}" ]] && xdebugparam="on"
-    ddev xdebug $xdebugparam
-fi
-
-# Launch mail service
-if [[ $mail == 1 ]]; then
-    echo "Launching mail service..."
-    ddev launch -m
-fi
-
-# Launch the project
-if [[ $launch == 1 ]]; then
-    echo "Launching project..."
-    ddev launch
-fi
-
-# Print continuous logs
-if [[ $logs == 1 ]]; then
-    echo "Printing continuous logs..."
-    ddev logs -f
-fi
-
-# Delete cache
-if [[ $deletecache == 1 ]]; then
-    echo "Deleting cache..."
-    ddev exec rm -rf var/cache/dev*
-    ddev exec rm -rf var/cache/prod*
 fi
 
 # Initialize the project
@@ -639,18 +730,6 @@ if [[ $test == 1 ]]; then
     ddev exec php bin/phpunit $testparam
 fi
 
-# Restart the project
-if [[ $restart == 1 ]]; then
-    echo "Restarting project..."
-    ddev restart
-fi
-
-# Check project status
-if [[ $status == 1 ]]; then
-    echo "Checking project status..."
-    ddev describe
-fi
-
 # Create a backup
 if [[ $backup == 1 ]]; then
     echo "Creating backup..."
@@ -664,19 +743,6 @@ if [[ $restore == 1 ]]; then
     [[ -z "${restoreparam-}" ]] && restoreparam="backup.tar.gz"
     ddev exec tar -xzf $restoreparam
     echo "Project restored from: $restoreparam"
-fi
-
-# Prune unused Docker resources
-if [[ $prune == 1 ]]; then
-    echo "Pruning unused Docker resources..."
-    ddev exec docker system prune -f
-    echo "Unused Docker resources pruned"
-fi
-
-# Run linting tools
-if [[ $lint == 1 ]]; then
-    echo "Running linting tools..."
-    ddev exec npm run lint
 fi
 
 if [[ $packages == 1 ]]; then
@@ -711,25 +777,26 @@ create_package_name() {
     echo "$vendor$name"
 }
 
-# Upgrade the script
-if [[ $upgrade == 1 ]]; then
-    upgrade
-fi
-
 # Create a new project
 if [[ $new == 1 ]]; then
     echo "Creating new project: $newparam"
-    [[ -z "${newparam-}" ]] && newparam="symfony"
+
     if [[ $newparam == "symfony" ]]; then
-        echo "Configuring ddev symfony project..."
         ddev config --docroot=public
-        ddev composer create symfony/skeleton
+        ddev composer create symfony/skeleton .
         ddev composer require webapp
-        ddev launch
+        ddev start
     elif [[ $newparam == "shopware" ]]; then
         echo "Configuring ddev shopware project..."
-        ddev config --project-type=shopware6 --disable-settings-management --docroot=shopware/public --create-docroot --web-working-dir=/var/www/html/shopware \
-            --database=mysql:8.0 --php-version=8.2 --nodejs-version=20 --webserver-type=apache-fpm \
+        ddev config --project-type=shopware6 \
+            --disable-settings-management \
+            --docroot=shopware/public \
+            --create-docroot \
+            --web-working-dir=/var/www/html/shopware \
+            --database=mysql:8.0 \
+            --php-version=8.2 \
+            --nodejs-version=20 \
+            --webserver-type=apache-fpm \
             --web-environment-add="DATABASE_URL=mysql://db:db@db:3306/db,MAILER_DSN=smtp://localhost:1025?encryption=&auth_mode=,APP_URL=\${DDEV_PRIMARY_URL},APP_DEBUG=1,APP_ENV=dev"
 
         ddev start
@@ -739,10 +806,14 @@ if [[ $new == 1 ]]; then
 
         echo "Installing Shopware..."
         ddev exec bin/console system:install --basic-setup --shop-locale=de-DE
-    else
-        die "Unknown project type: $newparam"
+        ddev exec bin/console cache:clear
     fi
-    mkdir .project
+    mkdir -p .project
+fi
+
+# Versionsprüfung am Skriptstart
+if [[ ! -f "${SCRIPT_DIR}/VERSION" ]]; then
+    echo "${YELLOW}WARNING: VERSION file missing!${NOFORMAT}"
 fi
 
 exit 0

@@ -1,6 +1,6 @@
 # Development CLI Tools
 
-CLI tool to simplify daily development work with DDEV, Shopware and Symfony.
+CLI-Tool zur Vereinfachung der täglichen Entwicklungsarbeit mit DDEV, Shopware und Symfony.
 
 ## Installation
 
@@ -8,56 +8,56 @@ CLI tool to simplify daily development work with DDEV, Shopware and Symfony.
 # Clone Repository
 git clone https://github.com/akaw/dev-cli-tools.git
 
-# Create symbolic link
-ln -s /path/to/dev-cli-tools/dev /usr/local/bin/dev
+# Symbolischen Link erstellen
+ln -s /pfad/zu/dev-cli-tools/dev /usr/local/bin/dev
 
-# Make executable
-chmod +x /path/to/dev-cli-tools/dev
+# Ausführbar machen
+chmod +x /pfad/zu/dev-cli-tools/dev
 ```
 
-## Requirements
+## Voraussetzungen
 
 - DDEV
-- Docker or OrbStack
+- Docker oder OrbStack
 - PHP 8.2+
 - Node.js 20+
 
-## Main Features
+## Hauptfunktionen
 
-- Project management (start, stop, restart)
-- Database operations (import, export)
-- Development tools (xdebug, logs, tests)
-- Composer management
-- Shopware specific commands
+- Projekt-Management (start, stop, restart)
+- Datenbank-Operationen (import, export)
+- Entwicklungs-Tools (xdebug, logs, tests)
+- Composer-Verwaltung
+- Shopware-spezifische Befehle
 
-## Examples
+## Beispiele
 
 ```bash
-# Start project
+# Projekt starten
 dev up
 
-# Import database
+# Datenbank importieren
 dev import
 
-# Install dependencies
+# Abhängigkeiten installieren
 dev composer install
 
-# Build Shopware
+# Shopware bauen
 dev build storefront
 ```
 
-## Development
+## Entwicklung
 
-Contributions are welcome! Please note:
+Beiträge sind willkommen! Bitte beachten:
 
-1. Fork the repository
-2. Create feature branch
-3. Commit changes
-4. Create pull request
+1. Fork des Repositories
+2. Feature Branch erstellen
+3. Änderungen committen
+4. Pull Request erstellen
 
-## License
+## Lizenz
 
-This project is licensed under the MIT License.
+Dieses Projekt ist unter der MIT-Lizenz lizenziert.
 
 ```text
 MIT License
