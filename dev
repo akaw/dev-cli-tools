@@ -335,7 +335,6 @@ parse_params() {
         -h | --help) usage ;;
         -vvv | --verbose) set -x ;;
         -v | --version)
-            version
             shift
             ;;
         s | ssh)
