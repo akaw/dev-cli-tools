@@ -632,15 +632,16 @@ parse_params() {
 # Main execution
 main() {
     # Handle version and help first
-    if [[ "${1-}" == "-v" ]] || [[ "${1-}" == "--version" ]]; then
-        version
-        exit 0
-    fi
-
-    if [[ "${1-}" == "-h" ]] || [[ "${1-}" == "--help" ]]; then
-        usage
-        exit 0
-    fi
+    case "${1-}" in
+        -v | --version)
+            version
+            exit 0
+            ;;
+        -h | --help)
+            usage
+            exit 0
+            ;;
+    esac
 
     # Check if no arguments provided
     if [ $# -eq 0 ]; then
@@ -652,19 +653,22 @@ main() {
     parse_params "$@"
     setup_colors
 
-    # Check for ddev only if we need it
-    if ! command -v ddev &>/dev/null; then
-        die "ddev is not installed. Please install ddev first."
-    fi
-
     # Execute commands based on parsed parameters
     execute_commands "$@"
-
-    exit 0
 }
 
 execute_commands() {
-    # Execute console commands
+    # Only check for ddev if we're executing commands that need it
+    if [[ $console == 1 ]] || [[ $composer == 1 ]] || [[ $build == 1 ]] || 
+       [[ $watch == 1 ]] || [[ $exportdb == 1 ]] || [[ $importdb == 1 ]] ||
+       [[ $init == 1 ]] || [[ $test == 1 ]] || [[ $backup == 1 ]] ||
+       [[ $restore == 1 ]] || [[ $packages == 1 ]] || [[ $new == 1 ]]; then
+        if ! command -v ddev &>/dev/null; then
+            die "ddev is not installed. Please install ddev first."
+        fi
+    fi
+
+    # Execute commands
     if [[ $console == 1 ]]; then
         echo "Executing console command: $consoleparam"
         ddev exec console "$consoleparam"
