@@ -2,6 +2,25 @@
 
 All notable changes to the Development CLI Tools will be documented in this file.
 
+## [1.1.0] - 2025-05-13
+
+### Added
+- Enhanced logging system with colored output and timestamps
+- Improved error handling and shellcheck compliance
+- Added pre-commit hook for shell script validation
+- Improved documentation with German translation (READMEDE.md)
+
+### Changed
+- Refactored code structure for better maintainability
+- Enhanced Docker environment detection and startup
+- Improved variable handling and quoting
+- Updated build process for Shopware components
+
+### Fixed
+- Fixed various shellcheck warnings
+- Improved error messages and logging
+- Fixed file path handling in various commands
+
 ## [1.0.0] - 2024-01-14
 
 ### Initial Release
