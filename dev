@@ -631,7 +631,7 @@ parse_params() {
 
 # Main execution
 main() {
-    # Check help and version flags first
+    # Early exit for version and help
     case "${1-}" in
         -h | --help)
             usage
@@ -643,8 +643,10 @@ main() {
             ;;
     esac
 
-    # Parse command line parameters
+    # Parse remaining parameters
     parse_params "$@"
+
+    # Only set up colors and check ddev if we're not showing version or help
     setup_colors
 
     # Now check if ddev is installed for all other commands
