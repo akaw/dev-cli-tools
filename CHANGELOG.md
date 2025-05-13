@@ -2,6 +2,13 @@
 
 All notable changes to the Development CLI Tools will be documented in this file.
 
+## [1.1.1] - 2025-05-14
+
+### Changed
+- Improved documentation of command shortcuts in README files
+- Enhanced command reference for single-letter commands
+- Better organization of command groups in documentation
+
 ## [1.1.0] - 2025-05-13
 
 ### Added
