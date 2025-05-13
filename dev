@@ -631,30 +631,40 @@ parse_params() {
 
 # Main execution
 main() {
-    # Early exit for version and help
-    case "${1-}" in
-        -h | --help)
-            usage
-            exit 0
-            ;;
-        -v | --version)
-            version
-            exit 0
-            ;;
-    esac
+    # Handle version and help first
+    if [[ "${1-}" == "-v" ]] || [[ "${1-}" == "--version" ]]; then
+        version
+        exit 0
+    fi
 
-    # Parse remaining parameters
+    if [[ "${1-}" == "-h" ]] || [[ "${1-}" == "--help" ]]; then
+        usage
+        exit 0
+    fi
+
+    # Check if no arguments provided
+    if [ $# -eq 0 ]; then
+        default
+        exit 1
+    fi
+
+    # Parse parameters and setup colors
     parse_params "$@"
-
-    # Only set up colors and check ddev if we're not showing version or help
     setup_colors
 
-    # Now check if ddev is installed for all other commands
+    # Check for ddev only if we need it
     if ! command -v ddev &>/dev/null; then
         die "ddev is not installed. Please install ddev first."
     fi
 
     # Execute commands based on parsed parameters
+    execute_commands "$@"
+
+    exit 0
+}
+
+execute_commands() {
+    # Execute console commands
     if [[ $console == 1 ]]; then
         echo "Executing console command: $consoleparam"
         ddev exec console "$consoleparam"
