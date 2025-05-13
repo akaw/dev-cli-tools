@@ -631,9 +631,32 @@ parse_params() {
 
 # Main execution
 main() {
-    # Parse command line parameters first
+    # Check help and version flags first
+    case "${1-}" in
+        -h | --help)
+            usage
+            exit 0
+            ;;
+        -v | --version)
+            version
+            exit 0
+            ;;
+    esac
+
+    # Parse command line parameters
     parse_params "$@"
     setup_colors
+
+    # Now check if ddev is installed for all other commands
+    if ! command -v ddev &>/dev/null; then
+        die "ddev is not installed. Please install ddev first."
+    fi
+
+    # Execute commands based on parsed parameters
+    if [[ $console == 1 ]]; then
+        echo "Executing console command: $consoleparam"
+        ddev exec console "$consoleparam"
+    fi
 
     # Check arguments that don't need ddev
     case "${1-}" in
