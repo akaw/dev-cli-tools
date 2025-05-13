@@ -17,6 +17,27 @@ OS=$(uname -s)
 set -Eeuo pipefail
 trap cleanup SIGINT SIGTERM ERR EXIT
 
+# Create default config if it doesn't exist
+create_default_config() {
+    cat >"${CONFIG_FILE}" <<EOL
+# Docker Environment (orbstack or docker)
+DOCKER_ENVIRONMENT="orbstack"
+
+# Default paths
+BACKUP_DIR=".project/backups"
+DB_EXPORT_FILE=".project/db.sql.gz"
+
+# Project settings
+DEFAULT_PHP_VERSION="8.2"
+DEFAULT_NODE_VERSION="20"
+
+# Logging settings
+LOG_LEVEL="INFO"   # DEBUG, INFO, WARN, ERROR
+LOG_FILE="dev.log"
+EOL
+    info "Created default configuration file: ${CONFIG_FILE}"
+}
+
 # Define script directory and version
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd -P)
 VERSION=$(cat "${SCRIPT_DIR}/VERSION" 2>/dev/null || echo "unknown")
@@ -26,7 +47,8 @@ CONFIG_FILE="config.env"
 if [[ -f "${CONFIG_FILE}" ]]; then
     source "${CONFIG_FILE}"
 else
-    echo "No configuration found"
+    create_default_config
+    source "${CONFIG_FILE}"
 fi
 
 # Log level
@@ -636,21 +658,21 @@ main() {
     # Handle global options
     while [[ "${1-}" =~ ^- ]]; do
         case "${1-}" in
-            --no-color)
-                NO_COLOR=1
-                shift
-                ;;
-            -v | --version)
-                version
-                exit 0
-                ;;
-            -h | --help)
-                usage
-                exit 0
-                ;;
-            *)
-                break
-                ;;
+        --no-color)
+            NO_COLOR=1
+            shift
+            ;;
+        -v | --version)
+            version
+            exit 0
+            ;;
+        -h | --help)
+            usage
+            exit 0
+            ;;
+        *)
+            break
+            ;;
         esac
     done
 
@@ -670,10 +692,10 @@ main() {
 # Remove unreachable version check in execute_commands
 execute_commands() {
     # Only check for ddev if we're executing commands that need it
-    if [[ $console == 1 ]] || [[ $composer == 1 ]] || [[ $build == 1 ]] || 
-       [[ $watch == 1 ]] || [[ $exportdb == 1 ]] || [[ $importdb == 1 ]] ||
-       [[ $init == 1 ]] || [[ $test == 1 ]] || [[ $backup == 1 ]] ||
-       [[ $restore == 1 ]] || [[ $packages == 1 ]] || [[ $new == 1 ]]; then
+    if [[ $console == 1 ]] || [[ $composer == 1 ]] || [[ $build == 1 ]] ||
+        [[ $watch == 1 ]] || [[ $exportdb == 1 ]] || [[ $importdb == 1 ]] ||
+        [[ $init == 1 ]] || [[ $test == 1 ]] || [[ $backup == 1 ]] ||
+        [[ $restore == 1 ]] || [[ $packages == 1 ]] || [[ $new == 1 ]]; then
         if ! command -v ddev &>/dev/null; then
             die "ddev is not installed. Please install ddev first."
         fi
