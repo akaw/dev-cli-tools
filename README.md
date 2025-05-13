@@ -2,13 +2,18 @@
 
 CLI tool to simplify daily development work with DDEV, Shopware and Symfony.
 
-## Installation
+[![Version](https://img.shields.io/github/v/release/akaw/dev-cli-tools)](https://github.com/akaw/dev-cli-tools/releases)
+[![Build Status](https://github.com/akaw/dev-cli-tools/workflows/Test/badge.svg)](https://github.com/akaw/dev-cli-tools/actions)
+[![GitHub topics](https://img.shields.io/github/topics/akaw/dev-cli-tools)](https://github.com/akaw/dev-cli-tools)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+## **Installation**
 
 ```bash
 # Clone Repository
 git clone https://github.com/akaw/dev-cli-tools.git
 
-# Create symbolic link
+# Create symbolic **link**
 ln -s /path/to/dev-cli-tools/dev /usr/local/bin/dev
 
 # Make executable
@@ -54,6 +59,16 @@ Contributions are welcome! Please note:
 2. Create feature branch
 3. Commit changes
 4. Create pull request
+
+### Development Setup Tip
+
+```bash
+# Install shellcheck (macOS)
+brew install shellcheck
+
+# Configure git hooks
+git config core.hooksPath .githooks
+```
 
 ## License
 

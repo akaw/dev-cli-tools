@@ -6,29 +6,10 @@
 #
 # Description: dDEV shortening tools
 # Usage: dev [OPTIONS] [PARAMETERS]
-# Version: 1.0.0
+# Version: 1.1.0
 # https://github.com/akaw/dev-cli-tools/
 #
-# Examples:
-#   dev u s l
-#   dev composer install
-#   dev composer require symfony/webpack-encore-bundle
-#   dev composer remove symfony/webpack-encore-bundle
-#   dev composer dump-autoload
-#   dev composer update
-#   dev new symfony
-#   dev new shopware
-#   dev export
-#   dev import
-#   dev sequelace
-#   dev logs
-#   dev up
-#   dev down
-#   dev open
-#   dev xdebug on
-#   dev xdebug off
-#   dev mail
-#   ...
+# shellcheck disable=SC2034,SC2168,SC2317
 
 DOCKER_ENVIRONMENT="orbstack" # or docker
 OS=$(uname -s)
@@ -36,27 +17,33 @@ OS=$(uname -s)
 set -Eeuo pipefail
 trap cleanup SIGINT SIGTERM ERR EXIT
 
+# Define script directory and version
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd -P)
+VERSION=$(cat "${SCRIPT_DIR}/VERSION" 2>/dev/null || echo "unknown")
+
 CONFIG_FILE="config.env"
-source "${CONFIG_FILE}" 2>/dev/null || echo "No configuration found"
+# shellcheck source=/dev/null
+if [[ -f "${CONFIG_FILE}" ]]; then
+    source "${CONFIG_FILE}"
+else 
+    echo "No configuration found"
+fi
 
 # Log level
 log_level=1
+
 log() {
-    if [[ $log_level -ge 1 ]]; then
-        echo -e "\033[1;32m[$(date '+%Y-%m-%d %H:%M:%S')] $1\033[0m"
+    if [[ ${log_level} -ge 1 ]]; then
+        local timestamp
+        timestamp="$(date '+%Y-%m-%d %H:%M:%S')"
+        echo -e "\033[1;32m[${timestamp}] $1\033[0m"
     fi
 }
+
 error() {
     log "ERROR: $1"
     exit 1
 }
-
-# script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd -P)
-# ScriptDir: "$script_dir"
-
-# Define script directory and version
-SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd -P)
-VERSION=$(cat "${SCRIPT_DIR}/VERSION" 2>/dev/null || echo "unknown")
 
 # Logging Konfiguration
 LOG_FILE="${SCRIPT_DIR}/dev.log"
@@ -79,7 +66,8 @@ declare -A COLORS=(
 log() {
     local level=$1
     local message=$2
-    local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+    local timestamp
+    timestamp="$(date '+%Y-%m-%d %H:%M:%S')"
 
     # Prüfe ob Logging für dieses Level aktiviert ist
     [[ $level == "DEBUG" && $LOG_LEVEL != "DEBUG" ]] && return
@@ -221,7 +209,7 @@ upgrade() {
         curl -o "${SCRIPT_DIR}/VERSION" "https://raw.githubusercontent.com/akaw/dev-cli-tools/main/VERSION"; then
         chmod +x "$script_path"
         echo "Update successful!"
-        echo "New version: $(cat ${SCRIPT_DIR}/VERSION)"
+        echo "New version: $(cat "${SCRIPT_DIR}"/VERSION)"
     else
         echo "Update failed. Restoring backup..."
         mv "${script_path}.backup" "$script_path"
@@ -389,7 +377,7 @@ parse_params() {
             ;;
         l)
             echo "Printing continuous logs..."
-            tail -f ./var/log/dev-$(date '+%Y-%m-%d').log
+            tail -f "./var/log/dev-$(date '+%Y-%m-%d').log"
             shift
             ;;
         o | launch)
@@ -399,7 +387,7 @@ parse_params() {
                 shift
             else
                 echo "Open ${2-}"
-                ddev launch ${2-}
+                ddev launch "${2-}"
                 shift 2
             fi
             ;;
@@ -422,7 +410,7 @@ parse_params() {
             new=1
             newparam="${2-}"
             if [[ -z "${newparam}" ]]; then
-                read -p "Please provide project type (symfony|shopware): " newparam
+                read -r -p "Please provide project type (symfony|shopware): " newparam
             fi
             case "$newparam" in
             symfony | sy | sym)
@@ -444,7 +432,7 @@ parse_params() {
             ;;
         x | xdebug)
             [[ -z "${xdebugparam-}" ]] && xdebugparam="on"
-            ddev xdebug ${2-}
+            ddev xdebug "${2-}"
             shift 2
             ;;
         t | test)
@@ -602,10 +590,19 @@ parse_params() {
             ;;
         init)
             init=1
-            shift
-            ;;
-        m | mail)
-            mail=1
+            read -r -p "Initialize DEV Environment it will overwrite db and .env.local (y/n)?" choice
+            case "$choice" in
+            y | Y)
+                echo "Initializing project..."
+                check_file_exists ".project/init.sql.gz"
+                check_file_exists ".project/env.ddev"
+                ddev exec cp .env.ddev .env.local
+                ddev start
+                ddev import-db -f .project/init.sql.gz
+                ddev describe
+                ;;
+            *) usage ;;
+            esac
             shift
             ;;
         upgrade)
@@ -629,8 +626,6 @@ parse_params() {
         esac
     done
 
-    args=("$@")
-
     return 0
 }
 
@@ -650,13 +645,13 @@ setup_colors
 # Execute console commands
 if [[ $console == 1 ]]; then
     echo "Executing console command: $consoleparam"
-    ddev exec console $consoleparam
+    ddev exec console "$consoleparam"
 fi
 
 # Run composer commands
 if [[ $composer == 1 ]]; then
     echo "Updating project dependencies..."
-    ddev composer $composerparam
+    ddev composer "$composerparam"
     echo "Project dependencies updated"
 fi
 
@@ -664,8 +659,8 @@ fi
 if [[ $prefersource == 1 ]]; then
     [[ -z "${prefersourceparam-}" ]] && die "Please provide a composer package name"
     echo "Running composer prefer-source for package: $prefersourceparam"
-    ddev composer remove $prefersourceparam
-    ddev composer require $prefersourceparam --prefer-source
+    ddev composer remove "$prefersourceparam"
+    ddev composer require "$prefersourceparam" --prefer-source
 fi
 
 # Build shopware components
@@ -696,19 +691,19 @@ fi
 # Export the database
 if [[ $exportdb == 1 ]]; then
     echo "Exporting database..."
-    ddev export-db -f $exportdbparam
+    ddev export-db -f "$exportdbparam"
 fi
 
 # Import the database
 if [[ $importdb == 1 ]]; then
     echo "Importing database $importdbparam... "
     check_file_exists "$importdbparam"
-    ddev import-db -f $importdbparam
+    ddev import-db -f "$importdbparam"
 fi
 
 # Initialize the project
 if [[ $init == 1 ]]; then
-    read -p "Initialize DEV Environment it will overwrite db and .env.local (y/n)?" choice
+    read -r -p "Initialize DEV Environment it will overwrite db and .env.local (y/n)?" choice
     case "$choice" in
     y | Y)
         echo "Initializing project..."
@@ -727,7 +722,7 @@ fi
 if [[ $test == 1 ]]; then
     echo "Running tests: $testparam"
     [[ -z "${testparam-}" ]] && testparam=""
-    ddev exec php bin/phpunit $testparam
+    ddev exec php bin/phpunit "$testparam"
 fi
 
 # Create a backup
@@ -741,40 +736,48 @@ fi
 if [[ $restore == 1 ]]; then
     echo "Restoring project from backup: $restoreparam"
     [[ -z "${restoreparam-}" ]] && restoreparam="backup.tar.gz"
-    ddev exec tar -xzf $restoreparam
+    ddev exec tar -xzf "$restoreparam"
     echo "Project restored from: $restoreparam"
 fi
 
-if [[ $packages == 1 ]]; then
+# Process packages
+process_packages() {
     local base_dir="./"
     local vendor_dir="$base_dir/vendor"
     local plugins_dir="$base_dir/custom/plugins"
 
     find "$vendor_dir/store.shopware.com" -name "composer.json" -type f -maxdepth 2 | while read -r store_composer_file; do
-        local path=$(dirname "$store_composer_file" | sed "s|$vendor_dir/||")
-        local link_name=$(create_package_name "$path")
-        local link_path="$plugins_dir/$link_name"
+        local path
+        local link_name
+        local link_path
+
+        path=$(dirname "$store_composer_file" | sed "s|$vendor_dir/||")
+        link_name=$(create_package_name "$path")
+        link_path="$plugins_dir/$link_name"
 
         if [ "$packagesparam" = true ]; then
-            # Entfernen Sie vorhandene Links oder Verzeichnisse
             [ -L "$link_path" ] && unlink "$link_path"
             [ -d "$link_path" ] && rmdir "$link_path"
-
-            # Erstellen Sie den Symlink
             ln -s "../../vendor/$path" "$link_path"
         else
             echo "$link_name"
         fi
     done
+}
+
+if [[ $packages == 1 ]]; then
+    process_packages
 fi
 
 create_package_name() {
+    if [[ $# -ne 1 ]]; then
+        die "Usage: create_package_name <path>"
+    fi
+    
     local path="$1"
-    local vendor=$(echo "$path" | cut -d'/' -f1)
-    local name=$(echo "$path" | cut -d'/' -f2)
-    vendor=$(echo "${vendor^}")
-    name=$(echo "$name" | sed -e 's/-/ /g' -e 's/\b\(.\)/\u\1/g' -e 's/ //g')
-    echo "$vendor$name"
+    local vendor
+    local name
+    
 }
 
 # Create a new project
@@ -815,5 +818,10 @@ fi
 if [[ ! -f "${SCRIPT_DIR}/VERSION" ]]; then
     echo "${YELLOW}WARNING: VERSION file missing!${NOFORMAT}"
 fi
+
+# Remove unused variables
+unset RED GREEN sequelace logs down xdebug ssh start deletecache restart status \
+    update install require requireparam prune upgrade poweroff version lint \
+    launch launchparam remove removeparam mail NO_COLOR args
 
 exit 0
