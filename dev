@@ -630,28 +630,38 @@ parse_params() {
 
 # Main execution
 main() {
-    # Handle version and help first
-    case "${1-}" in
-        -v | --version)
-            version
-            exit 0
-            ;;
-        -h | --help)
-            usage
-            exit 0
-            ;;
-        *)
-            # Check if no arguments provided
-            if [ $# -eq 0 ]; then
-                default
-                exit 1
-            fi
-            ;;
-    esac
-
-    # Parse parameters and setup colors
-    parse_params "$@"
+    # Setup colors first
     setup_colors
+
+    # Handle global options
+    while [[ "${1-}" =~ ^- ]]; do
+        case "${1-}" in
+            --no-color)
+                NO_COLOR=1
+                shift
+                ;;
+            -v | --version)
+                version
+                exit 0
+                ;;
+            -h | --help)
+                usage
+                exit 0
+                ;;
+            *)
+                break
+                ;;
+        esac
+    done
+
+    # Check if no arguments provided
+    if [ $# -eq 0 ]; then
+        default
+        exit 1
+    fi
+
+    # Parse remaining parameters
+    parse_params "$@"
 
     # Execute commands based on parsed parameters
     execute_commands "$@"
