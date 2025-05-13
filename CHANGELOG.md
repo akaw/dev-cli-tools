@@ -2,6 +2,11 @@
 
 All notable changes to the Development CLI Tools will be documented in this file.
 
+## [1.1.2] - 2025-05-14
+
+### Added
+- Automatic creation of default config.env if not exists
+
 ## [1.1.1] - 2025-05-14
 
 ### Changed
