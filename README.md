@@ -35,20 +35,64 @@ chmod +x /path/to/dev-cli-tools/dev
 - Composer management
 - Shopware specific commands
 
+## Command Shortcuts
+
+### Project Management
+- `dev u` - Start project (up)
+- `dev d` - Stop project (down)
+- `dev r` - Restart project
+- `dev st` - Show status
+- `dev o` - Open in browser
+
+### Database
+- `dev e` - Export database
+- `dev i` - Import database
+- `dev sq` - Open Sequel Ace
+- `dev mi` - Run migrations
+
+### Development
+- `dev x` - Toggle xdebug
+- `dev t` - Run tests
+- `dev l` - Show logs
+- `dev ma` - Mail server
+
+### Composer
+- `dev c` - Composer command
+- `dev cu` - Update dependencies
+- `dev ci` - Install dependencies
+- `dev cr` - Add package (require)
+- `dev crm` - Remove package
+- `dev ca` - Dump autoloader
+
+### Shopware
+- `dev b` - Build components
+- `dev w` - Watch components
+- `dev cc` - Clear cache
+- `dev p` - Plugin commands:
+  - `dev pr` - Refresh plugins
+  - `dev pl` - List plugins
+  - `dev pa` - Activate plugin
+  - `dev pd` - Deactivate plugin
+
+### Project
+- `dev n` - New project
+- `dev bk` - Backup
+- `dev rs` - Restore
+
 ## Examples
 
 ```bash
 # Start project
-dev up
+dev u
 
 # Import database
-dev import
+dev i
 
 # Install dependencies
-dev composer install
+dev i
 
 # Build Shopware
-dev build storefront
+dev b s
 ```
 
 ## Development

@@ -30,20 +30,64 @@ chmod +x /pfad/zu/dev-cli-tools/dev
 - Composer-Verwaltung
 - Shopware-spezifische Befehle
 
+## Befehlsabkürzungen
+
+### Projekt-Management
+- `dev u` - Projekt starten (up)
+- `dev d` - Projekt stoppen (down)
+- `dev r` - Projekt neu starten
+- `dev st` - Status anzeigen
+- `dev o` - Im Browser öffnen
+
+### Datenbank
+- `dev e` - Datenbank exportieren
+- `dev i` - Datenbank importieren
+- `dev sq` - Sequel Ace öffnen
+- `dev mi` - Migrationen ausführen
+
+### Entwicklung
+- `dev x` - Xdebug umschalten
+- `dev t` - Tests ausführen
+- `dev l` - Logs anzeigen
+- `dev ma` - Mailserver starten
+
+### Composer
+- `dev c` - Composer-Befehl
+- `dev cu` - Abhängigkeiten aktualisieren
+- `dev ci` - Abhängigkeiten installieren
+- `dev cr` - Paket hinzufügen
+- `dev crm` - Paket entfernen
+- `dev ca` - Autoloader aktualisieren
+
+### Shopware
+- `dev b` - Komponenten bauen
+- `dev w` - Komponenten überwachen
+- `dev cc` - Cache leeren
+- `dev p` - Plugin-Befehle:
+  - `dev pr` - Plugins aktualisieren
+  - `dev pl` - Plugins auflisten
+  - `dev pa` - Plugin aktivieren
+  - `dev pd` - Plugin deaktivieren
+
+### Projekt
+- `dev n` - Neues Projekt
+- `dev bk` - Backup
+- `dev rs` - Wiederherstellen
+
 ## Beispiele
 
 ```bash
 # Projekt starten
-dev up
+dev u
 
 # Datenbank importieren
-dev import
+dev i
 
 # Abhängigkeiten installieren
-dev composer install
+dev ci
 
 # Shopware bauen
-dev build storefront
+dev b
 ```
 
 ## Entwicklung
