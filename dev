@@ -641,13 +641,14 @@ main() {
             usage
             exit 0
             ;;
+        *)
+            # Check if no arguments provided
+            if [ $# -eq 0 ]; then
+                default
+                exit 1
+            fi
+            ;;
     esac
-
-    # Check if no arguments provided
-    if [ $# -eq 0 ]; then
-        default
-        exit 1
-    fi
 
     # Parse parameters and setup colors
     parse_params "$@"
@@ -657,6 +658,7 @@ main() {
     execute_commands "$@"
 }
 
+# Remove unreachable version check in execute_commands
 execute_commands() {
     # Only check for ddev if we're executing commands that need it
     if [[ $console == 1 ]] || [[ $composer == 1 ]] || [[ $build == 1 ]] || 
