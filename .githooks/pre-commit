@@ -1,0 +1,22 @@
+#!/bin/bash
+
+echo "Running pre-commit hook..."
+
+# Run shellcheck on shell scripts
+if ! command -v shellcheck &>/dev/null; then
+    echo "Error: shellcheck is not installed"
+    echo "Install with: brew install shellcheck"
+    exit 1
+fi
+
+# Check shell scripts
+for file in $(git diff --cached --name-only | grep -E '\.(sh|bash)$|^dev$'); do
+    echo "Checking $file"
+    if ! shellcheck "$file"; then
+        echo "shellcheck failed for $file"
+        exit 1
+    fi
+done
+
+echo "Pre-commit checks passed"
+exit 0
