@@ -675,40 +675,11 @@ execute_commands() {
         ddev exec console "$consoleparam"
     fi
 
-    # Check arguments that don't need ddev
-    case "${1-}" in
-    -h | --help)
-        usage
-        ;;
-    -v | --version)
-        version
-        ;;
-    esac
-
-    # Now check if ddev is installed for all other commands
-    if ! command -v ddev &>/dev/null; then
-        die "ddev is not installed. Please install ddev first."
-    fi
-
-    # Execute commands
-    if [[ $console == 1 ]]; then
-        echo "Executing console command: $consoleparam"
-        ddev exec console "$consoleparam"
-    fi
-
     # Run composer commands
     if [[ $composer == 1 ]]; then
         echo "Updating project dependencies..."
         ddev composer "$composerparam"
         echo "Project dependencies updated"
-    fi
-
-    # Run composer prefer-source
-    if [[ $prefersource == 1 ]]; then
-        [[ -z "${prefersourceparam-}" ]] && die "Please provide a composer package name"
-        echo "Running composer prefer-source for package: $prefersourceparam"
-        ddev composer remove "$prefersourceparam"
-        ddev composer require "$prefersourceparam" --prefer-source
     fi
 
     # Build shopware components
