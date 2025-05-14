@@ -6,77 +6,34 @@
 #
 # Description: dDEV shortening tools
 # Usage: dev [OPTIONS] [PARAMETERS]
-# Version: 1.1.3
+# Version: 1.1.4
 # https://github.com/akaw/dev-cli-tools/
 #
 # shellcheck disable=SC2034,SC2168,SC2317
 
 # Default Configuration
-VERSION="1.1.3"
-DOCKER_ENVIRONMENT="orbstack"
-BACKUP_DIR=".project/backups"
-DB_EXPORT_FILE=".project/db.sql.gz"
-DEFAULT_PHP_VERSION="8.2"
-DEFAULT_NODE_VERSION="20"
-LOG_LEVEL="INFO"
-LOG_FILE="dev.log"
+VERSION="1.1.4"
+DOCKER_ENVIRONMENT="${DOCKER_ENVIRONMENT:-orbstack}"
+BACKUP_DIR="${BACKUP_DIR:-.project/backups}"
+DB_EXPORT_FILE="${DB_EXPORT_FILE:-.project/db.sql.gz}"
+DEFAULT_PHP_VERSION="${DEFAULT_PHP_VERSION:-8.2}"
+DEFAULT_NODE_VERSION="${DEFAULT_NODE_VERSION:-20}"
+LOG_LEVEL="${LOG_LEVEL:-INFO}"
+LOG_FILE="${LOG_FILE:-dev.log}"
 
 OS=$(uname -s)
 
 set -Eeuo pipefail
 trap cleanup SIGINT SIGTERM ERR EXIT
 
-# Create default config if it doesn't exist
-create_default_config() {
-    cat >"${CONFIG_FILE}" <<EOL
-# Docker Environment (orbstack or docker)
-DOCKER_ENVIRONMENT="orbstack"
-
-# Default paths
-BACKUP_DIR=".project/backups"
-DB_EXPORT_FILE=".project/db.sql.gz"
-
-# Project settings
-DEFAULT_PHP_VERSION="8.2"
-DEFAULT_NODE_VERSION="20"
-
-# Logging settings
-LOG_LEVEL="INFO"   # DEBUG, INFO, WARN, ERROR
-LOG_FILE="dev.log"
-EOL
-    info "Created default configuration file: ${CONFIG_FILE}"
-}
-
 # Define script directory
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd -P)
-
-CONFIG_FILE="config.env"
-# shellcheck source=/dev/null
-if [[ -f "${CONFIG_FILE}" ]]; then
-    source "${CONFIG_FILE}"
-else
-    create_default_config
-    source "${CONFIG_FILE}"
-fi
 
 # Log level
 log_level=1
 
-log() {
-    if [[ ${log_level} -ge 1 ]]; then
-        local timestamp
-        timestamp="$(date '+%Y-%m-%d %H:%M:%S')"
-        echo -e "\033[1;32m[${timestamp}] $1\033[0m"
-    fi
-}
-
-error() {
-    log "ERROR: $1"
-    exit 1
-}
-
 # Logging Konfiguration
-LOG_FILE="${SCRIPT_DIR}/dev.log"
+LOG_FILE="${SCRIPT_DIR}/${LOG_FILE}"
 LOG_LEVEL=${LOG_LEVEL:-"INFO"} # DEBUG, INFO, WARN, ERROR
 
 # Erweiterte Farbdefinitionen
@@ -192,13 +149,19 @@ EOF
 
 # Einfache Versionierung und Meldungsausgabe
 version() {
-    echo "Version: ${VERSION}"
+    echo -e "dev-cli-tools ${VERSION}\nhttps://github.com/akaw/dev-cli-tools/"
+    exit 0
 }
 
 # Cleanup function to handle script termination
 cleanup() {
     trap - SIGINT SIGTERM ERR EXIT
-    # script cleanup here
+    # Beende alle laufenden Prozesse
+    jobs -p | xargs -r kill
+    # Lösche temporäre Dateien falls vorhanden
+    if [ -n "${TEMP_DIR-}" ] && [ -d "$TEMP_DIR" ]; then
+        rm -rf "$TEMP_DIR"
+    fi
 }
 
 # Vereinfachte Farbausgabe

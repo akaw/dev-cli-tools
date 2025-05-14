@@ -2,6 +2,14 @@
 
 All notable changes to the Development CLI Tools will be documented in this file.
 
+## [1.1.4] - 2025-05-14
+
+### Changed
+- Removed `config.env` file in favor of environment variables
+- Simplified configuration management
+- Enhanced environment variable handling
+- Improved code maintainability
+
 ## [1.1.3] - 2025-05-14
 
 ### Added
