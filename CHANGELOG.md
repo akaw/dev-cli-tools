@@ -2,6 +2,14 @@
 
 All notable changes to the Development CLI Tools will be documented in this file.
 
+## [1.1.3] - 2025-05-14
+
+### Added
+- Enhanced logging system with color-coded output for different log levels
+- Added specific logging functions for debug, info, warn, and error levels
+- Improved timestamp formatting in log messages
+- Added file logging with proper formatting
+
 ## [1.1.2] - 2025-05-14
 
 ### Changed
