@@ -329,7 +329,7 @@ parse_params() {
         -h | --help) usage ;;
         -vvv | --verbose) set -x ;;
         -v | --version)
-            shift
+            version
             ;;
         s | ssh)
             echo "Connecting to project via SSH..."

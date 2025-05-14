@@ -11,12 +11,46 @@ fi
 
 # Check shell scripts
 for file in $(git diff --cached --name-only | grep -E '\.(sh|bash)$|^dev$'); do
-    echo "Checking $file"
+    echo "Checking $file with shellcheck"
     if ! shellcheck "$file"; then
         echo "shellcheck failed for $file"
         exit 1
     fi
 done
 
+# Version consistency check
+echo "Checking version consistency..."
+
+# Extrahiere Version aus src/dev
+if [[ -f "src/dev" ]]; then
+    version_script=$(grep "^VERSION=" src/dev | cut -d'"' -f2)
+    if [[ -z "$version_script" ]]; then
+        echo "Error: Could not find VERSION in src/dev"
+        exit 1
+    fi
+else
+    echo "Error: src/dev not found"
+    exit 1
+fi
+
+# Überprüfe README.md
+if [[ -f "README.md" ]]; then
+    version_readme=$(grep -o 'version-[0-9.]\+-blue' README.md | cut -d'-' -f2)
+    if [[ "$version_readme" != "$version_script" ]]; then
+        echo "Error: Version mismatch in README.md ($version_readme != $version_script)"
+        exit 1
+    fi
+fi
+
+# Überprüfe CHANGELOG.md
+if [[ -f "CHANGELOG.md" ]]; then
+    version_changelog=$(grep -o '\[[0-9.]\+\]' CHANGELOG.md | head -n1 | tr -d '[]')
+    if [[ "$version_changelog" != "$version_script" ]]; then
+        echo "Error: Version mismatch in CHANGELOG.md ($version_changelog != $version_script)"
+        exit 1
+    fi
+fi
+
+echo "Version consistency check passed"
 echo "Pre-commit checks passed"
 exit 0
