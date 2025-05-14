@@ -4,8 +4,12 @@ All notable changes to the Development CLI Tools will be documented in this file
 
 ## [1.1.2] - 2025-05-14
 
-### Added
-- Automatic creation of default config.env if not exists
+### Changed
+- Improved project structure: Moved main script to `src/` directory
+- Integrated configuration directly into main script
+- Removed separate configuration files (config.env and VERSION)
+- Simplified installation with self-contained script
+- Enhanced documentation with flexible installation options
 
 ## [1.1.1] - 2025-05-14
 
