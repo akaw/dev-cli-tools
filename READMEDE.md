@@ -6,27 +6,28 @@ CLI-Tool zur Vereinfachung der täglichen Entwicklungsarbeit mit DDEV, Shopware 
 
 Das Tool besteht aus einem einzigen Bash-Skript (`src/dev`), das an beliebiger Stelle im System platziert werden kann. Hier sind verschiedene Installationsmöglichkeiten:
 
-### Option 1: Repository klonen
+### Option 1: Direkter Download
 
-```bash
-# Clone Repository
-git clone https://github.com/akaw/dev-cli-tools.git
-
-# Symbolischen Link erstellen (macOS/Linux)
-ln -s "$(pwd)/dev-cli-tools/src/dev" /usr/local/bin/dev
-
-# Ausführbar machen
-chmod +x dev-cli-tools/src/dev
-```
-
-### Option 2: Direkter Download
-
-Sie können auch nur die Skriptdatei herunterladen und sie beliebig platzieren, zum Beispiel in Ihrem eigenen bin-Verzeichnis:
+Laden Sie einfach die Skriptdatei herunter und platzieren Sie sie wo Sie möchten, zum Beispiel in Ihrem eigenen bin-Verzeichnis:
 
 ```bash
 # Skript herunterladen (Beispiel für ~/config/bin Verzeichnis)
 mkdir -p ~/config/bin
 curl -o ~/config/bin/dev https://raw.githubusercontent.com/akaw/dev-cli-tools/main/src/dev
+chmod +x ~/config/bin/dev
+
+# Zum PATH hinzufügen falls nötig (in .zshrc, .bashrc, etc.)
+export PATH="$HOME/config/bin:$PATH"
+```
+
+### Option 2: Manuelle Kopie
+
+Wenn Sie das Repository geklont haben, können Sie das Skript einfach an den gewünschten Ort kopieren:
+
+```bash
+# Skript kopieren (Beispiel für ~/config/bin Verzeichnis)
+mkdir -p ~/config/bin
+cp src/dev ~/config/bin/
 chmod +x ~/config/bin/dev
 
 # Zum PATH hinzufügen falls nötig (in .zshrc, .bashrc, etc.)
