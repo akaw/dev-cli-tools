@@ -9,16 +9,36 @@ CLI tool to simplify daily development work with DDEV, Shopware and Symfony.
 
 ## **Installation**
 
+The tool consists of a single bash script (`src/dev`) that can be placed anywhere in your system. Here are different ways to install it:
+
+### Option 1: Clone Repository
+
 ```bash
 # Clone Repository
 git clone https://github.com/akaw/dev-cli-tools.git
 
-# Create symbolic **link**
-ln -s /path/to/dev-cli-tools/dev /usr/local/bin/dev
+# Create symbolic link (macOS/Linux)
+ln -s "$(pwd)/dev-cli-tools/src/dev" /usr/local/bin/dev
 
 # Make executable
-chmod +x /path/to/dev-cli-tools/dev
+chmod +x dev-cli-tools/src/dev
 ```
+
+### Option 2: Direct Download
+
+You can also download just the script file and place it wherever you want, for example in your custom bin directory:
+
+```bash
+# Download script (example for ~/config/bin directory)
+mkdir -p ~/config/bin
+curl -o ~/config/bin/dev https://raw.githubusercontent.com/akaw/dev-cli-tools/main/src/dev
+chmod +x ~/config/bin/dev
+
+# Add to PATH if needed (add to .zshrc, .bashrc, etc.)
+export PATH="$HOME/config/bin:$PATH"
+```
+
+The script is self-contained and can be placed in any location of your choice. Just make sure the location is in your PATH.
 
 ## Requirements
 
