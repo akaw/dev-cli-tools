@@ -10,12 +10,37 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - name: Run shellcheck
-        run: shellcheck dev
-      - name: Test version output without ddev
+      - uses: actions/checkout@v4
+
+      - name: Setup environment
         run: |
-          chmod +x dev
-          # Temporär die ddev-Prüfung deaktivieren für den Versionstest
-          sed -i 's/command -v ddev/false/' dev
-          ./dev --version
+          sudo apt-get update
+          sudo apt-get install -y shellcheck
+
+      - name: Check script permissions
+        run: |
+          test -x src/dev || chmod +x src/dev
+
+      - name: Run shellcheck
+        run: shellcheck src/dev
+
+      - name: Test version output
+        run: ./src/dev --version
+
+      - name: Check script syntax
+        run: bash -n src/dev
+
+      - name: Validate documentation
+        run: |
+          test -f README.md
+          test -f READMEDE.md
+          test -f CONTRIBUTING.md
+          test -f LICENSE
+          test -f CHANGELOG.md
+
+      - name: Check file encoding
+        run: |
+          if file src/dev | grep -q "CRLF"; then
+            echo "Error: CRLF line endings detected"
+            exit 1
+          fi
