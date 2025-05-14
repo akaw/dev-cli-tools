@@ -2,6 +2,28 @@
 
 All notable changes to the Development CLI Tools will be documented in this file.
 
+## [1.1.5] - 2025-05-14
+
+### Added
+- Enhanced project creation with automatic configuration
+- Added support for Symfony 6.4 projects
+- Added standardized project structure creation
+- Added automatic build tool setup for both Symfony and Shopware
+
+### Changed
+- Switched project language to English
+- Improved error messages and documentation
+- Added language note to README.md
+- Moved German documentation to READMEDE.md
+- Enhanced project initialization process
+- Improved Docker environment detection
+- Added better error handling for service startup
+
+### Fixed
+- Fixed project creation in empty directories
+- Improved error messages for missing dependencies
+- Fixed build script permissions
+
 ## [1.1.4] - 2025-05-14
 
 ### Changed

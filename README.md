@@ -2,12 +2,50 @@
 
 CLI tool to simplify daily development work with DDEV, Shopware and Symfony.
 
-[![Version](https://img.shields.io/badge/version-1.1.4-blue.svg)](https://github.com/akaw/dev-cli-tools/releases)
+[![Version](https://img.shields.io/badge/version-1.1.5-blue.svg)](https://github.com/akaw/dev-cli-tools/releases)
 [![Build Status](https://github.com/akaw/dev-cli-tools/actions/workflows/test.yml/badge.svg)](https://github.com/akaw/dev-cli-tools/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Shellcheck](https://img.shields.io/badge/shellcheck-passing-brightgreen.svg)](https://www.shellcheck.net/)
 
-## **Installation**
+> **Note**: The primary language of this project is English. A German translation of the documentation is available in [READMEDE.md](READMEDE.md).
+
+## Architecture
+
+```mermaid
+graph TB
+    User([User]) --> |commands| CLI[CLI Interface]
+    CLI --> |parses| Parser[Command Parser]
+    Parser --> |executes| CommandExecutor[Command Executor]
+    
+    subgraph Core Components
+        CommandExecutor --> ProjectMgmt[Project Management]
+        CommandExecutor --> DBOps[Database Operations]
+        CommandExecutor --> DevTools[Development Tools]
+        CommandExecutor --> ComposerMgmt[Composer Management]
+        CommandExecutor --> ShopwareTools[Shopware Tools]
+    end
+
+    subgraph External Systems
+        ProjectMgmt --> |interacts| DDEV[DDEV]
+        DBOps --> |manages| Database[(Database)]
+        DevTools --> |configures| Xdebug[Xdebug]
+        ComposerMgmt --> |manages| Composer[Composer]
+        ShopwareTools --> |builds| Shopware[Shopware]
+    end
+
+    subgraph Environment
+        DDEV --> |uses| Docker[Docker/OrbStack]
+        Database --> |runs in| Docker
+    end
+
+    subgraph Logging System
+        CommandExecutor --> Logger[Logger]
+        Logger --> |writes| LogFile[Log File]
+        Logger --> |displays| ColorOutput[Colored Output]
+    end
+```
+
+## Installation
 
 The tool consists of a single bash script (`src/dev`) that can be placed anywhere in your system. Here are different ways to install it:
 
