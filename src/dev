@@ -1205,3 +1205,6 @@ create_package_name() {
 
     echo "$vendor$name"
 }
+
+# Start execution
+main "$@"
