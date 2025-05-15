@@ -827,7 +827,8 @@ parse_params() {
         ;;
 
     *)
-        die "Unknown command: $command"
+        debug "Executing command in container: $command $*"
+        ddev exec "$command" "$@"
         ;;
     esac
 
@@ -991,13 +992,13 @@ execute_commands() {
     if [[ $build == 1 ]]; then
         debug "Building components: $buildparam"
         case "$buildparam" in
-        "storefront")
+        "storefront" | "store" | "s")
             ddev exec bin/build-storefront.sh
             ;;
-        "administration")
+        "administration" | "admin" | "a")
             ddev exec bin/build-administration.sh
             ;;
-        "js")
+        "js" | "javascript" | "j")
             ddev exec bin/build-js.sh
             ;;
         *)

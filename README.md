@@ -94,6 +94,20 @@ The script is self-contained and can be placed in any location of your choice. J
 - Composer management
 - Shopware specific commands
 
+### Direct Command Execution
+Any command that is not recognized as a shortcut will be executed directly inside the container using `ddev exec`. This allows you to run any command without explicitly using `ddev exec`:
+
+```bash
+# These commands are equivalent:
+ddev exec php -v
+dev php -v
+
+# Run any command in the container
+dev node --version
+dev composer --version
+dev bin/console debug:router
+```
+
 ## Command Shortcuts
 
 ### Project Management

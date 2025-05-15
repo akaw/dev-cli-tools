@@ -95,6 +95,20 @@ Das Skript ist eigenständig und kann an jedem beliebigen Ort platziert werden. 
 - `dev bk` - Backup
 - `dev rs` - Wiederherstellen
 
+### Direkte Befehlsausführung
+Jeder Befehl, der nicht als Kurzform erkannt wird, wird direkt im Container mit `ddev exec` ausgeführt. Das ermöglicht es, jeden beliebigen Befehl auszuführen, ohne explizit `ddev exec` zu verwenden:
+
+```bash
+# Diese Befehle sind gleichwertig:
+ddev exec php -v
+dev php -v
+
+# Führe beliebige Befehle im Container aus
+dev node --version
+dev composer --version
+dev bin/console debug:router
+```
+
 ## Beispiele
 
 ```bash
