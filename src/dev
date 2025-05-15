@@ -12,7 +12,7 @@
 # shellcheck disable=SC2034,SC2168,SC2317
 
 # Default Configuration
-VERSION="1.1.5"
+VERSION="1.1.6"
 DOCKER_ENVIRONMENT="${DOCKER_ENVIRONMENT:-orbstack}"
 BACKUP_DIR="${BACKUP_DIR:-.project/backups}"
 DB_EXPORT_FILE="${DB_EXPORT_FILE:-.project/db.sql.gz}"
@@ -102,6 +102,7 @@ PROJECT:
     r,   restart         Restart project
     st,  status          Show project status
     o,   open            Open in browser
+    ssh                  Connect via SSH
     init                 Initialize project
 
 DATABASE:
@@ -109,12 +110,14 @@ DATABASE:
     i,   import [file]   Import database
     seq, sequelace       Start Sequel Ace
     da:mi                Run database migrations
+    da:mi:all           Run all database migrations
 
 DEVELOPMENT:
     x,   xdebug         Enable/disable xdebug (on|off)
     t,   test           Run tests [options]
     l,   logs           Show logs
     m,   mail           Start mail server
+    dr,  debug:router   Show routing information
 
 COMPOSER:
     c,   composer       Run composer command
@@ -123,26 +126,31 @@ COMPOSER:
     cre, require        Add package [pkg]
     crm, remove         Remove package [pkg]
     cda                 Update autoloader
+    src, prefer-source  Reinstall package with source
 
 SHOPWARE:
-    b,   build [comp]   Build components (storefront|admin|js)
-    w,   watch [comp]   Watch components
-    cc                  Clear cache
-    pl:re               Refresh plugins
-    pl:li               List plugins
-    pl:ac [plugin]      Activate plugin
-    pl:de [plugin]      Deactivate plugin
-
-PROJECT:
-    n,   new [type]     Create new project (symfony|shopware)
-    bk,  backup         Create backup
-    rs,  restore        Restore backup
-    upgrade             Update script
+    b | build [comp]          Build components (js|admin|store)
+    ba | build:administration Build administration
+    bs | build:storefront     Build storefront
+    bj | build:js            Build JavaScript
+    w | watch [comp]         Watch components
+    cc | cache:clear         Clear cache
+    cd | cache:delete        Delete cache files
+    mc | messenger:consume   Run messenger consumer
+    pl | plugin:list         List plugins
+    plre | plugin:refresh    Refresh plugins
+    plac | plugin:activate   Activate plugin
+    plde | plugin:deactivate Deactivate plugin
+    plin | plugin:install    Install plugin
+    plun | plugin:uninstall  Uninstall plugin
+    plup | plugin:update     Update plugin
 
 Examples:
     dev up                 Start project
     dev composer install   Install dependencies
-    dev new shopware       Create new Shopware project
+    dev new shopware      Create new Shopware project
+    dev build:admin       Build administration
+    dev watch:store       Watch storefront
 EOF
     exit 0
 }
@@ -518,7 +526,262 @@ parse_params() {
     shift || true
 
     case "$command" in
+    u | up | start)
+        debug "Starting project..."
+        start=1
+        ;;
+
+    d | down | stop)
+        debug "Stopping project..."
+        down=1
+        ;;
+
+    r | restart)
+        debug "Restarting project..."
+        restart=1
+        ;;
+
+    st | sta | stat | status | info)
+        debug "Showing project status..."
+        status=1
+        ;;
+
+    o | launch)
+        debug "Opening in browser..."
+        launch=1
+        launchparam="${1-}"
+        [[ -n "$launchparam" ]] && shift
+        ;;
+
+    ssh)
+        debug "Connecting via SSH..."
+        ssh=1
+        ;;
+
+    # Database commands
+    e | export)
+        debug "Exporting database..."
+        exportdb=1
+        exportdbparam="${1-.project/db.sql.gz}"
+        [[ -n "$exportdbparam" ]] && shift
+        ;;
+
+    i | import)
+        debug "Importing database..."
+        importdb=1
+        importdbparam="${1-.project/db.sql.gz}"
+        [[ -n "$importdbparam" ]] && shift
+        ;;
+
+    se | seq | sequelace)
+        debug "Starting Sequel Ace..."
+        sequelace=1
+        ;;
+
+    dami | da:mi | database:migrate)
+        debug "Running database migrations..."
+        console=1
+        consoleparam="database:migrate ${1-}"
+        [[ -n "${1-}" ]] && shift
+        ;;
+
+    damiall | da:mi:all | database:migrate:all)
+        debug "Running all database migrations..."
+        console=1
+        consoleparam="database:migrate --all"
+        ;;
+
+    # Development commands
+    x | xdebug)
+        debug "Toggling xdebug..."
+        xdebug=1
+        xdebugparam="${1-on}"
+        [[ -n "${1-}" ]] && shift
+        ;;
+
+    t | test)
+        debug "Running tests..."
+        test=1
+        testparam="${1-}"
+        [[ -n "$testparam" ]] && shift
+        ;;
+
+    l | logs)
+        debug "Showing logs..."
+        logs=1
+        ;;
+
+    m | ma | mail)
+        debug "Starting mail server..."
+        mail=1
+        ;;
+
+    dr | de:ro | debug:router)
+        debug "Running debug:router..."
+        console=1
+        consoleparam="debug:router"
+        ;;
+
+    # Composer commands
+    c | com | composer)
+        debug "Running composer command..."
+        composer=1
+        composerparam="${1-}"
+        [[ -n "$composerparam" ]] && shift
+        ;;
+
+    cup | update)
+        debug "Updating dependencies..."
+        composer=1
+        composerparam="update"
+        ;;
+
+    cin | install)
+        debug "Installing dependencies..."
+        composer=1
+        composerparam="install"
+        ;;
+
+    cre | require)
+        debug "Adding package..."
+        require=1
+        requireparam="${1-}"
+        [[ -n "$requireparam" ]] && shift
+        ;;
+
+    crm | remove)
+        debug "Removing package..."
+        remove=1
+        removeparam="${1-}"
+        [[ -n "$removeparam" ]] && shift
+        ;;
+
+    ca | cda | dump-autoload)
+        debug "Updating autoloader..."
+        composer=1
+        composerparam="dump-autoload"
+        ;;
+
+    src | source | prefer-source)
+        debug "Setting prefer-source..."
+        prefersource=1
+        prefersourceparam="${1-}"
+        [[ -n "$prefersourceparam" ]] && shift
+        ;;
+
+    # Shopware commands
+    b | build)
+        debug "Building components..."
+        build=1
+        buildparam="${1-}"
+        [[ -n "$buildparam" ]] && shift
+        ;;
+
+    ba | build:administration)
+        debug "Building administration..."
+        build=1
+        buildparam="administration"
+        ;;
+
+    bs | build:storefront)
+        debug "Building storefront..."
+        build=1
+        buildparam="storefront"
+        ;;
+
+    bj | build:js | all)
+        debug "Building JavaScript..."
+        build=1
+        buildparam="js"
+        ;;
+
+    w | watch)
+        debug "Watching components..."
+        watch=1
+        watchparam="${1-}"
+        [[ -n "$watchparam" ]] && shift
+        ;;
+
+    wa | wa:ad | watch:administration)
+        debug "Watching administration..."
+        watch=1
+        watchparam="administration"
+        ;;
+
+    ws | wa:st | watch:storefront)
+        debug "Watching storefront..."
+        watch=1
+        watchparam="storefront"
+        ;;
+
+    cd | cade | ca:de | cache:delete)
+        debug "Deleting cache..."
+        deletecache=1
+        ;;
+
+    cc | cacl | ca:cl | cache:clear)
+        debug "Clearing cache..."
+        console=1
+        consoleparam="cache:clear"
+        ;;
+
+    mc | meco | me:co | messenger:consume)
+        debug "Starting messenger consumer..."
+        console=1
+        consoleparam="messenger:consume"
+        ;;
+
+    # Plugin commands
+    plre | pl:re | plugin:refresh)
+        debug "Refreshing plugins..."
+        console=1
+        consoleparam="plugin:refresh"
+        ;;
+
+    pl | pli | plli | pl:li | plugin:list)
+        debug "Listing plugins..."
+        console=1
+        consoleparam="plugin:list"
+        ;;
+
+    plac | pl:ac | plugin:activate)
+        debug "Activating plugin..."
+        console=1
+        consoleparam="plugin:activate ${1-}"
+        [[ -n "${1-}" ]] && shift
+        ;;
+
+    plin | pl:in | plugin:install)
+        debug "Installing plugin..."
+        console=1
+        consoleparam="plugin:install ${1-}"
+        [[ -n "${1-}" ]] && shift
+        ;;
+
+    plun | pl:un | plugin:uninstall)
+        debug "Uninstalling plugin..."
+        console=1
+        consoleparam="plugin:uninstall ${1-}"
+        [[ -n "${1-}" ]] && shift
+        ;;
+
+    plup | pl:up | plugin:update)
+        debug "Updating plugin..."
+        console=1
+        consoleparam="plugin:update ${1-}"
+        [[ -n "${1-}" ]] && shift
+        ;;
+
+    plde | pl:de | plugin:deactivate)
+        debug "Deactivating plugin..."
+        console=1
+        consoleparam="plugin:deactivate ${1-}"
+        [[ -n "${1-}" ]] && shift
+        ;;
+
+    # Project commands
     n | new)
+        debug "Creating new project..."
         new=1
         newparam="${1-}"
         if [[ -z "$newparam" ]]; then
@@ -541,64 +804,26 @@ parse_params() {
         esac
         ;;
 
-    b | build)
-        build=1
-        buildparam="${1-}"
-        [[ -n "$buildparam" ]] && shift
-        ;;
-
-    w | watch)
-        watch=1
-        watchparam="${1-}"
-        [[ -n "$watchparam" ]] && shift
-        ;;
-
-    e | export)
-        exportdb=1
-        exportdbparam="${1-.project/db.sql.gz}"
-        [[ -n "$exportdbparam" ]] && shift
-        ;;
-
-    i | import)
-        importdb=1
-        importdbparam="${1-.project/db.sql.gz}"
-        [[ -n "$importdbparam" ]] && shift
-        ;;
-
-    t | test)
-        test=1
-        testparam="${1-}"
-        [[ -n "$testparam" ]] && shift
-        ;;
-
-    u | up)
-        start=1
-        ;;
-
-    d | down)
-        down=1
-        ;;
-
-    r | restart)
-        restart=1
-        ;;
-
-    st | status)
-        status=1
+    init)
+        debug "Initializing project..."
+        init=1
         ;;
 
     bk | backup)
+        debug "Creating backup..."
         backup=1
         ;;
 
     rs | restore)
+        debug "Restoring from backup..."
         restore=1
         restoreparam="${1-}"
         [[ -n "$restoreparam" ]] && shift
         ;;
 
-    init)
-        init=1
+    upgrade)
+        debug "Upgrading script..."
+        upgrade
         ;;
 
     *)
@@ -619,6 +844,7 @@ init_command_flags() {
     restart=0
     status=0
     init=0
+    ssh=0
 
     # Database commands
     exportdb=0
@@ -634,6 +860,7 @@ init_command_flags() {
     testparam=""
     logs=0
     mail=0
+    deletecache=0
 
     # Console commands
     console=0
@@ -659,14 +886,19 @@ init_command_flags() {
     prefersource=0
     prefersourceparam=""
 
-    # Misc commands
+    # Launch commands
+    launch=0
+    launchparam=""
+
+    # Backup commands
     backup=0
     restore=0
     restoreparam=""
-    launch=0
-    launchparam=""
+
+    # System flags
     version=0
     lint=0
+    NO_COLOR=0
 }
 
 # Main execution
@@ -727,63 +959,145 @@ execute_commands() {
         fi
     fi
 
-    # Execute commands
+    # Execute console commands
     if [[ $console == 1 ]]; then
-        echo "Executing console command: $consoleparam"
-        ddev exec console "$consoleparam"
+        debug "Executing console command: $consoleparam"
+        ddev exec bin/console "$consoleparam"
     fi
 
     # Run composer commands
     if [[ $composer == 1 ]]; then
-        echo "Updating project dependencies..."
+        debug "Running composer command: $composerparam"
         ddev composer "$composerparam"
-        echo "Project dependencies updated"
+    fi
+
+    # Handle package requirements
+    if [[ $require == 1 ]]; then
+        debug "Adding package: $requireparam"
+        if [[ $prefersource == 1 ]]; then
+            ddev composer require "$requireparam" --prefer-source
+        else
+            ddev composer require "$requireparam"
+        fi
+    fi
+
+    # Handle package removal
+    if [[ $remove == 1 ]]; then
+        debug "Removing package: $removeparam"
+        ddev composer remove "$removeparam"
     fi
 
     # Build shopware components
     if [[ $build == 1 ]]; then
-        echo "Building project components: $buildparam"
-        if [[ $buildparam == "storefront" ]]; then
+        debug "Building components: $buildparam"
+        case "$buildparam" in
+        "storefront")
             ddev exec bin/build-storefront.sh
-        fi
-        if [[ $buildparam == "administration" ]]; then
+            ;;
+        "administration")
             ddev exec bin/build-administration.sh
-        fi
-        if [[ $buildparam == "js" ]]; then
+            ;;
+        "js")
             ddev exec bin/build-js.sh
-        fi
+            ;;
+        *)
+            warn "Unknown build component: $buildparam"
+            ;;
+        esac
     fi
 
+    # Watch components
     if [[ $watch == 1 ]]; then
-        if [[ -z "${watchparam}" || $watchparam == "storefront" || $watchparam == "store" || $watchparam == "s" ]]; then
-            echo "Watching storefront..."
+        debug "Watching components: $watchparam"
+        case "$watchparam" in
+        "storefront" | "store" | "s")
             ddev exec bin/watch-storefront.sh
-        fi
-        if [[ $watchparam == "administration" || $watchparam == "admin" || $watchparam == "a" ]]; then
-            echo "Watching administration..."
+            ;;
+        "administration" | "admin" | "a")
             ddev exec bin/watch-administration.sh
-        fi
+            ;;
+        *)
+            warn "Unknown watch component: $watchparam"
+            ;;
+        esac
     fi
 
-    # Export the database
+    # Database operations
     if [[ $exportdb == 1 ]]; then
-        echo "Exporting database..."
+        debug "Exporting database to: $exportdbparam"
         ddev export-db -f "$exportdbparam"
     fi
 
-    # Import the database
     if [[ $importdb == 1 ]]; then
-        echo "Importing database from $importdbparam..."
+        debug "Importing database from: $importdbparam"
         check_file_exists "$importdbparam"
         ddev import-db -f "$importdbparam"
     fi
 
-    # Initialize the project
+    # Project operations
+    if [[ $start == 1 ]]; then
+        debug "Starting project..."
+        ddev start
+        ddev describe
+    fi
+
+    if [[ $down == 1 ]]; then
+        debug "Stopping project..."
+        ddev stop
+    fi
+
+    if [[ $restart == 1 ]]; then
+        debug "Restarting project..."
+        ddev restart
+        ddev describe
+    fi
+
+    if [[ $status == 1 ]]; then
+        debug "Showing project status..."
+        ddev describe
+    fi
+
+    # Direct command execution
+    if [[ $ssh == 1 ]]; then
+        debug "Opening SSH connection..."
+        ddev ssh
+    fi
+
+    if [[ $sequelace == 1 ]]; then
+        debug "Starting Sequel Ace..."
+        ddev sequelace
+    fi
+
+    if [[ $launch == 1 ]]; then
+        if [[ -n "$launchparam" ]]; then
+            debug "Opening specific URL: $launchparam"
+            ddev launch "$launchparam"
+        else
+            debug "Opening default project URL..."
+            ddev launch
+        fi
+    fi
+
+    # Cache operations
+    if [[ $deletecache == 1 ]]; then
+        debug "Deleting cache files..."
+        ddev exec rm -rf var/cache/dev*
+        ddev exec rm -rf var/cache/prod*
+    fi
+
+    # Testing
+    if [[ $test == 1 ]]; then
+        debug "Running tests: ${testparam-}"
+        ddev exec php bin/phpunit "${testparam-}"
+    fi
+
+    # Initialize project
     if [[ $init == 1 ]]; then
+        debug "Initializing project..."
         read -r -p "Initialize DEV Environment? This will overwrite db and .env.local (y/n)?" choice
         case "$choice" in
         y | Y)
-            echo "Initializing project..."
+            info "Starting initialization..."
             check_file_exists ".project/init.sql.gz"
             check_file_exists ".project/env.ddev"
             ddev exec cp .env.ddev .env.local
@@ -791,182 +1105,102 @@ execute_commands() {
             ddev import-db -f .project/init.sql.gz
             ddev describe
             ;;
-        *) usage ;;
+        *)
+            info "Initialization cancelled"
+            ;;
         esac
     fi
 
-    # Run tests
-    if [[ $test == 1 ]]; then
-        echo "Running tests: $testparam"
-        [[ -z "${testparam-}" ]] && testparam=""
-        ddev exec php bin/phpunit "$testparam"
-    fi
-
-    # Create a backup
+    # Backup and restore
     if [[ $backup == 1 ]]; then
-        echo "Creating backup..."
-        ddev exec tar -czf backup.tar.gz .
-        echo "Backup created: backup.tar.gz"
+        debug "Creating backup..."
+        mkdir -p "$BACKUP_DIR"
+        local backup_file
+        backup_file="${BACKUP_DIR}/backup-$(date '+%Y-%m-%d-%H-%M-%S').tar.gz"
+        ddev exec tar -czf "$backup_file" .
+        info "Backup created: $backup_file"
     fi
 
-    # Restore the project from a backup
     if [[ $restore == 1 ]]; then
-        echo "Restoring project from backup: $restoreparam"
-        [[ -z "${restoreparam-}" ]] && restoreparam="backup.tar.gz"
-        ddev exec tar -xzf "$restoreparam"
-        echo "Project restored from: $restoreparam"
+        debug "Restoring from backup: ${restoreparam-backup.tar.gz}"
+        check_file_exists "${restoreparam-backup.tar.gz}"
+        ddev exec tar -xzf "${restoreparam-backup.tar.gz}"
+        info "Project restored from: ${restoreparam-backup.tar.gz}"
     fi
 
-    # Process packages
-    process_packages() {
-        local base_dir="./"
-        local vendor_dir="$base_dir/vendor"
-        local plugins_dir="$base_dir/custom/plugins"
+    # Mail server
+    if [[ $mail == 1 ]]; then
+        debug "Starting mail server..."
+        ddev mailhog
+    fi
 
-        find "$vendor_dir/store.shopware.com" -name "composer.json" -type f -maxdepth 2 | while read -r store_composer_file; do
-            local path
-            local link_name
-            local link_path
-
-            path=$(dirname "$store_composer_file" | sed "s|$vendor_dir/||")
-            link_name=$(create_package_name "$path")
-            link_path="$plugins_dir/$link_name"
-
-            if [ "$packagesparam" = true ]; then
-                [ -L "$link_path" ] && unlink "$link_path"
-                [ -d "$link_path" ] && rmdir "$link_path"
-                ln -s "../../vendor/$path" "$link_path"
-            else
-                echo "$link_name"
-            fi
-        done
-    }
-
+    # Package handling
     if [[ $packages == 1 ]]; then
+        debug "Processing packages..."
         process_packages
     fi
 
-    create_package_name() {
-        if [[ $# -ne 1 ]]; then
-            die "Usage: create_package_name <path>"
-        fi
-
-        local path="$1"
-        local vendor
-        local name
-
-        vendor=$(echo "$path" | cut -d'/' -f1)
-        name=$(echo "$path" | cut -d'/' -f2)
-        vendor="${vendor^}"
-        name=$(echo "$name" | sed -e 's/-/ /g' -e 's/\b\(.\)/\u\1/g' -e 's/ //g')
-        echo "$vendor$name"
-    }
-
-    # Create a new project
-    if [[ $new == 1 ]]; then
-        debug "Starting new project creation: $newparam"
-
-        # Validate project directory
-        if [[ -n "$(ls -A .)" ]]; then
-            die "Directory is not empty. Please create project in an empty directory."
-        fi
-
-        case "$newparam" in
-        "symfony")
-            info "Setting up Symfony project..."
-
-            # Configure DDEV
-            debug "Configuring DDEV for Symfony"
-            if ! ddev config --project-type=php \
-                --docroot=public \
-                --php-version="$DEFAULT_PHP_VERSION" \
-                --nodejs-version="$DEFAULT_NODE_VERSION" \
-                --database="mysql:$DEFAULT_MYSQL_VERSION" \
-                --webserver-type=nginx-fpm; then
-                die "DDEV configuration failed"
-            fi
-
-            # Start environment and create Symfony project
-            info "Starting DDEV environment..."
-            if ! ddev start; then
-                die "Failed to start DDEV environment"
-            fi
-
-            info "Creating Symfony project..."
-            if ! ddev composer create "symfony/skeleton:6.4.*" .; then
-                die "Failed to create Symfony project"
-            fi
-
-            info "Installing additional dependencies..."
-            if ! ddev composer require symfony/webapp-pack; then
-                die "Failed to install webapp dependencies"
-            fi
-
-            # Now create project structure after Symfony installation
-            debug "Creating project structure"
-            mkdir -p .project/{backups,config}
-            ;;
-
-        "shopware")
-            info "Setting up Shopware project..."
-
-            # Configure DDEV
-            debug "Configuring DDEV for Shopware"
-            if ! ddev config --project-type=shopware6 \
-                --docroot=shopware/public \
-                --php-version="$DEFAULT_PHP_VERSION" \
-                --nodejs-version="$DEFAULT_NODE_VERSION" \
-                --database="mysql:$DEFAULT_MYSQL_VERSION" \
-                --webserver-type=apache-fpm; then
-                die "DDEV configuration failed"
-            fi
-
-            # Start environment
-            info "Starting DDEV environment..."
-            if ! ddev start; then
-                die "Failed to start DDEV environment"
-            fi
-
-            # Create Shopware project
-            info "Creating Shopware project..."
-            if ! ddev exec "cd /var/www/html && rm -rf shopware/ && composer create-project shopware/production shopware -n"; then
-                die "Failed to create Shopware project"
-            fi
-
-            info "Installing Shopware..."
-            if ! ddev exec bin/console system:install --basic-setup --shop-locale=en-GB; then
-                die "Failed to install Shopware"
-            fi
-
-            # Now create project structure after Shopware installation
-            debug "Creating project structure"
-            mkdir -p .project/{backups,config}
-            ;;
-
-        *)
-            die "Unknown project type: $newparam"
-            ;;
-        esac
-
-        info "Project setup completed successfully"
-        info "You can now start developing with 'dev up'"
-
-        # Open project in browser if available
-        if command -v open >/dev/null 2>&1; then
-            debug "Opening project in browser"
-            ddev launch >/dev/null 2>&1 || true
-        fi
-
-        return 0
-    fi
-
-    # Remove unused variables
+    # Remove unnecessary variables
     unset RED GREEN sequelace logs down xdebug ssh start deletecache restart status \
         update install require requireparam prune upgrade poweroff version lint \
         launch launchparam remove removeparam mail NO_COLOR args
 
-    exit 0
+    return 0
 }
 
-# Start script
-main "$@"
+# Function to process packages and create symlinks
+process_packages() {
+    debug "Processing packages..."
+    local base_dir="./"
+    local vendor_dir="$base_dir/vendor"
+    local plugins_dir="$base_dir/custom/plugins"
+
+    # Create plugins directory if it doesn't exist
+    mkdir -p "$plugins_dir"
+
+    # Process store packages
+    debug "Processing store packages..."
+    if ! find "$vendor_dir/store.shopware.com" -name "composer.json" -type f -maxdepth 2 2>/dev/null | while read -r store_composer_file; do
+        local path
+        local link_name
+        local link_path
+
+        path=$(dirname "$store_composer_file" | sed "s|$vendor_dir/||")
+        link_name=$(create_package_name "$path")
+        link_path="$plugins_dir/$link_name"
+
+        if [[ $packagesparam == "true" ]]; then
+            debug "Creating symlink for $link_name"
+            [ -L "$link_path" ] && unlink "$link_path"
+            [ -d "$link_path" ] && rmdir "$link_path"
+            ln -s "../../vendor/$path" "$link_path"
+            info "Created symlink for $link_name"
+        else
+            echo "$link_name"
+        fi
+    done; then
+        warn "No store packages found or error processing packages"
+    fi
+}
+
+# Function to create a standardized package name
+create_package_name() {
+    if [[ $# -ne 1 ]]; then
+        die "Usage: create_package_name <path>"
+    fi
+
+    local path="$1"
+    local vendor
+    local name
+
+    vendor=$(echo "$path" | cut -d'/' -f1)
+    name=$(echo "$path" | cut -d'/' -f2)
+
+    # Capitalize first letter of vendor
+    vendor="${vendor^}"
+
+    # Convert kebab-case to PascalCase
+    name=$(echo "$name" | sed -e 's/-/ /g' -e 's/\b\(.\)/\u\1/g' -e 's/ //g')
+
+    echo "$vendor$name"
+}

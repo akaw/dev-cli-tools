@@ -2,6 +2,28 @@
 
 All notable changes to the Development CLI Tools will be documented in this file.
 
+## [1.1.6] - 2025-05-15
+
+### Added
+- Restored all command shortcuts from v1.0.0
+- Added more detailed build commands (ba, bs, bj)
+- Added watch commands for specific components (wa, ws)
+- Added extended plugin management commands (plin, plun, plup)
+- Added database migration command with --all option
+- Added debug router command (dr, debug:router)
+- Added messenger consume command (mc, messenger:consume)
+
+### Changed
+- Improved command parsing with enhanced debug output
+- Enhanced error handling in execute_commands
+- Simplified package management process
+- Updated usage information to show command variants
+
+### Fixed
+- Fixed shellcheck warning in backup file creation
+- Fixed command conflict between ssh and start commands
+- Improved parameter handling in parse_params
+
 ## [1.1.5] - 2025-05-14
 
 ### Added
@@ -9,6 +31,8 @@ All notable changes to the Development CLI Tools will be documented in this file
 - Added support for Symfony 6.4 projects
 - Added standardized project structure creation
 - Added automatic build tool setup for both Symfony and Shopware
+- Added automatic update check on script start
+- Added `check-update` command for manual update checks
 
 ### Changed
 - Switched project language to English
