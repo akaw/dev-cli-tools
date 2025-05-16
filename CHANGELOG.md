@@ -2,6 +2,13 @@
 
 All notable changes to the Development CLI Tools will be documented in this file.
 
+## [1.1.8] - 2025-05-16
+
+### Fixed
+- Critical bug: Docker environment (OrbStack/Docker) wasn't automatically started when running specific commands
+- The `start_docker_environment` function is now called before any DDEV operations
+- Added a delay after starting Docker/OrbStack to ensure it's fully initialized
+
 ## [1.1.7] - 2025-05-16
 
 ### Added

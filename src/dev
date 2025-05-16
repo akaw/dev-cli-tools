@@ -6,13 +6,13 @@
 #
 # Description: dDEV shortening tools
 # Usage: dev [OPTIONS] [PARAMETERS]
-# Version: 1.1.7
+# Version: 1.1.8
 # https://github.com/akaw/dev-cli-tools/
 #
 # shellcheck disable=SC2034,SC2168,SC2317
 
 # Default Configuration
-VERSION="1.1.7"
+VERSION="1.1.8"
 DOCKER_ENVIRONMENT="${DOCKER_ENVIRONMENT:-orbstack}"
 BACKUP_DIR="${BACKUP_DIR:-.project/backups}"
 DB_EXPORT_FILE="${DB_EXPORT_FILE:-.project/db.sql.gz}"
@@ -357,6 +357,9 @@ start_docker_environment() {
             info "OrbStack is already running"
         else
             start_service "orbstack" "/Applications/OrbStack.app"
+            # Add a short delay to ensure OrbStack is fully initialized
+            info "Waiting for OrbStack to fully initialize..."
+            sleep 5
         fi
         ;;
     "docker")
@@ -365,8 +368,14 @@ start_docker_environment() {
         else
             if [[ "$OS" == "Darwin" ]]; then
                 start_service "docker" "Docker"
+                # Add a short delay to ensure Docker is fully initialized
+                info "Waiting for Docker to fully initialize..."
+                sleep 5
             else
                 start_service "docker" "docker"
+                # Add a short delay to ensure Docker is fully initialized
+                info "Waiting for Docker to fully initialize..."
+                sleep 5
             fi
         fi
         ;;
@@ -958,11 +967,20 @@ main() {
 
 # Remove unreachable version check in execute_commands
 execute_commands() {
-    # Only check for ddev if we're executing commands that need it
+    # First, ensure Docker environment is running for any DDEV-related commands
     if [[ $console == 1 ]] || [[ $composer == 1 ]] || [[ $build == 1 ]] ||
         [[ $watch == 1 ]] || [[ $exportdb == 1 ]] || [[ $importdb == 1 ]] ||
         [[ $init == 1 ]] || [[ $test == 1 ]] || [[ $backup == 1 ]] ||
-        [[ $restore == 1 ]] || [[ $packages == 1 ]] || [[ $new == 1 ]]; then
+        [[ $restore == 1 ]] || [[ $packages == 1 ]] || [[ $new == 1 ]] ||
+        [[ $start == 1 ]] || [[ $down == 1 ]] || [[ $restart == 1 ]] ||
+        [[ $status == 1 ]] || [[ $ssh == 1 ]] || [[ $sequelace == 1 ]] ||
+        [[ $launch == 1 ]] || [[ $deletecache == 1 ]]; then
+        
+        # Start the Docker environment before proceeding
+        debug "Ensuring Docker environment is running..."
+        start_docker_environment
+        
+        # Check if DDEV is installed
         if ! command -v ddev &>/dev/null; then
             die "ddev is not installed. Please install ddev first."
         fi
