@@ -16,10 +16,19 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y shellcheck
+          # Install Bats testing framework
+          git clone https://github.com/bats-core/bats-core.git
+          cd bats-core
+          sudo ./install.sh /usr/local
+          cd ..
+          # Install Bats support libraries
+          git clone https://github.com/bats-core/bats-support.git
+          git clone https://github.com/bats-core/bats-assert.git
 
       - name: Check script permissions
         run: |
           test -x src/dev || chmod +x src/dev
+          chmod +x tests/mocks/ddev
 
       - name: Run shellcheck
         run: shellcheck src/dev
@@ -29,6 +38,12 @@ jobs:
 
       - name: Check script syntax
         run: bash -n src/dev
+
+      - name: Run Bats unit tests
+        run: bats tests/unit/
+
+      - name: Run Bats integration tests
+        run: bats tests/integration/
 
       - name: Validate documentation
         run: |

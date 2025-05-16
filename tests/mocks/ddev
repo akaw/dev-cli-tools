@@ -1,0 +1,78 @@
+#!/usr/bin/env bash
+
+# Mock ddev command for testing purposes
+# Records calls and returns predefined responses
+
+# Log the command call
+echo "ddev $*" >> "${TEMP_TEST_DIR:-/tmp}/ddev_calls.log"
+
+# Handle different ddev commands based on arguments
+case "$1" in
+    "version")
+        echo "ddev version mock"
+        ;;
+    "describe")
+        echo "Project: test-project"
+        echo "Status: running"
+        echo "URL: https://test-project.ddev.site"
+        ;;
+    "start")
+        echo "Starting project..."
+        echo "Successfully started test-project"
+        ;;
+    "stop")
+        echo "Stopping project..."
+        echo "Successfully stopped test-project"
+        ;;
+    "restart")
+        echo "Restarting project..."
+        echo "Successfully restarted test-project"
+        ;;
+    "export-db")
+        echo "Exporting database..."
+        touch "${3:-database.sql.gz}"
+        echo "Successfully exported database to ${3:-database.sql.gz}"
+        ;;
+    "import-db")
+        echo "Importing database..."
+        echo "Successfully imported database from ${3:-database.sql.gz}"
+        ;;
+    "composer")
+        echo "Running composer ${*:2}..."
+        echo "Composer completed successfully"
+        ;;
+    "exec")
+        # Handle various exec commands
+        shift
+        case "$1" in
+            "composer")
+                echo "Running composer ${*:2}..."
+                echo "Composer completed successfully"
+                ;;
+            "bin/console")
+                echo "Running bin/console ${*:2}..."
+                echo "Command completed successfully"
+                ;;
+            "bin/build-storefront.sh")
+                echo "Building storefront..."
+                echo "Storefront built successfully"
+                ;;
+            "bin/build-administration.sh")
+                echo "Building administration..."
+                echo "Administration built successfully"
+                ;;
+            "bin/build-js.sh")
+                echo "Building JavaScript..."
+                echo "JavaScript built successfully"
+                ;;
+            *)
+                echo "Executed: $*"
+                ;;
+        esac
+        ;;
+    *)
+        echo "Mock ddev executed with: $*"
+        ;;
+esac
+
+exit 0 

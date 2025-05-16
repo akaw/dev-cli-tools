@@ -6,13 +6,13 @@
 #
 # Description: dDEV shortening tools
 # Usage: dev [OPTIONS] [PARAMETERS]
-# Version: 1.1.5
+# Version: 1.1.7
 # https://github.com/akaw/dev-cli-tools/
 #
 # shellcheck disable=SC2034,SC2168,SC2317
 
 # Default Configuration
-VERSION="1.1.6"
+VERSION="1.1.7"
 DOCKER_ENVIRONMENT="${DOCKER_ENVIRONMENT:-orbstack}"
 BACKUP_DIR="${BACKUP_DIR:-.project/backups}"
 DB_EXPORT_FILE="${DB_EXPORT_FILE:-.project/db.sql.gz}"
@@ -92,17 +92,17 @@ USAGE:
     $(basename "${BASH_SOURCE[0]}") [OPTION] COMMAND [ARGS]
 
 OPTIONS:
-    -h,  --help            Show this help
-    -v,  --version         Show version
-         --no-color        Disable colored output
+    -h,  --help          Show this help
+    -v,  --version       Show version
+         --no-color      Disable colored output
 
 PROJECT:
-    u,   up               Start project
+    u,   up              Start project
     d,   down            Stop project
     r,   restart         Restart project
     st,  status          Show project status
     o,   open            Open in browser
-    ssh                  Connect via SSH
+    s,   ssh             Connect via SSH
     init                 Initialize project
 
 DATABASE:
@@ -110,47 +110,48 @@ DATABASE:
     i,   import [file]   Import database
     seq, sequelace       Start Sequel Ace
     da:mi                Run database migrations
-    da:mi:all           Run all database migrations
+    da:mi:all            Run all database migrations
 
 DEVELOPMENT:
-    x,   xdebug         Enable/disable xdebug (on|off)
-    t,   test           Run tests [options]
-    l,   logs           Show logs
-    m,   mail           Start mail server
-    dr,  debug:router   Show routing information
+    x,   xdebug          Enable/disable xdebug (on|off)
+    t,   test            Run tests [options]
+    l,   logs            Show logs
+    m,   mail            Start mail server
+    dr,  debug:router    Show routing information
 
 COMPOSER:
-    c,   composer       Run composer command
-    cup, update         Update dependencies
-    cin, install        Install dependencies
-    cre, require        Add package [pkg]
-    crm, remove         Remove package [pkg]
-    cda                 Update autoloader
-    src, prefer-source  Reinstall package with source
+    c,   composer        Run composer command
+    cup, update          Update dependencies
+    cin, install         Install dependencies
+    cre, require         Add package [pkg]
+    crm, remove          Remove package [pkg]
+    cda                  Update autoloader
+    src, prefer-source   Reinstall package with source
 
 SHOPWARE:
     b | build [comp]          Build components (js|admin|store)
     ba | build:administration Build administration
     bs | build:storefront     Build storefront
-    bj | build:js            Build JavaScript
-    w | watch [comp]         Watch components
-    cc | cache:clear         Clear cache
-    cd | cache:delete        Delete cache files
-    mc | messenger:consume   Run messenger consumer
-    pl | plugin:list         List plugins
-    plre | plugin:refresh    Refresh plugins
-    plac | plugin:activate   Activate plugin
-    plde | plugin:deactivate Deactivate plugin
-    plin | plugin:install    Install plugin
-    plun | plugin:uninstall  Uninstall plugin
-    plup | plugin:update     Update plugin
+    bj | build:js             Build JavaScript
+    w | watch [comp]          Watch components
+    cc | cache:clear          Clear cache
+    cd | cache:delete         Delete cache files
+    mc | messenger:consume    Run messenger consumer
+    pl | plugin:list          List plugins
+    plre | plugin:refresh     Refresh plugins
+    plac | plugin:activate    Activate plugin
+    plde | plugin:deactivate  Deactivate plugin
+    plin | plugin:install     Install plugin
+    plun | plugin:uninstall   Uninstall plugin
+    plup | plugin:update      Update plugin
 
 Examples:
-    dev up                 Start project
-    dev composer install   Install dependencies
-    dev new shopware      Create new Shopware project
-    dev build:admin       Build administration
-    dev watch:store       Watch storefront
+    dev        Start development environment 
+    dev u      Start project
+    dev ci     Composer Install
+    dev new    Create new project
+    dev ba     bin/build-administration
+    dev x on   Enable xdebug
 EOF
     exit 0
 }
@@ -238,8 +239,15 @@ check_service_status() {
     case "$env" in
     "orbstack")
         if [[ "$OS" == "Darwin" ]]; then
-            debug "Checking OrbStack service via launchctl"
-            check_service_running "launchctl" "com.orbstack.OrbStack"
+            # Alternative methods to check if OrbStack is running
+            if pgrep -f "OrbStack" >/dev/null ||
+                launchctl list | grep -q "com.orbstack.OrbStack" ||
+                [[ -S "$HOME/.orbstack/run/docker.sock" ]]; then
+                debug "OrbStack is running (detected via process/socket)"
+                return 0
+            fi
+            debug "OrbStack is not running"
+            return 1
         else
             debug "Checking OrbStack service via pgrep"
             check_service_running "pgrep" "OrbStack"

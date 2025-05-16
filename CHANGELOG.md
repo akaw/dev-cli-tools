@@ -2,6 +2,19 @@
 
 All notable changes to the Development CLI Tools will be documented in this file.
 
+## [1.1.7] - 2025-05-16
+
+### Added
+- Comprehensive test suite using Bats testing framework
+- Unit tests for core functionality
+- Integration tests for workflows
+- Test mocks for DDEV commands
+- GitHub Actions workflow updates for automated testing
+
+### Changed
+- Updated README with testing information
+- Added test documentation
+
 ## [1.1.6] - 2025-05-15
 
 ### Added

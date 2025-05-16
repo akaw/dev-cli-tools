@@ -2,7 +2,7 @@
 
 CLI tool to simplify daily development work with DDEV, Shopware and Symfony.
 
-[![Version](https://img.shields.io/badge/version-1.1.6-blue.svg)](https://github.com/akaw/dev-cli-tools/releases)
+[![Version](https://img.shields.io/badge/version-1.1.7-blue.svg)](https://github.com/akaw/dev-cli-tools/releases)
 [![Build Status](https://github.com/akaw/dev-cli-tools/actions/workflows/test.yml/badge.svg)](https://github.com/akaw/dev-cli-tools/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Shellcheck](https://img.shields.io/badge/shellcheck-passing-brightgreen.svg)](https://www.shellcheck.net/)
@@ -187,6 +187,20 @@ brew install shellcheck
 git config core.hooksPath .githooks
 ```
 
+## Testing
+
+The project includes automated tests using [Bats](https://github.com/bats-core/bats-core) (Bash Automated Testing System). See the [tests/README.md](tests/README.md) file for details on running and writing tests.
+
+To run the tests locally:
+
+```bash
+# Install Bats (macOS)
+brew install bats-core
+
+# Run all tests
+bats tests/unit tests/integration
+```
+
 ## License
 
 This project is licensed under the MIT License.
@@ -218,3 +232,10 @@ SOFTWARE.
 ## Author
 
 Andre Witte
+
+## Future Plans
+
+- [x] Test coverage
+- [ ] More Symfony specific commands
+- [ ] Enhanced error handling
+- [ ] Project templates
