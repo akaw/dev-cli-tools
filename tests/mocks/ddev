@@ -15,6 +15,11 @@ case "$1" in
         echo "Project: test-project"
         echo "Status: running"
         echo "URL: https://test-project.ddev.site"
+        exit 0
+        ;;
+    "status")
+        echo "test-project: running"
+        exit 0
         ;;
     "start")
         echo "Starting project..."
@@ -69,6 +74,15 @@ case "$1" in
                 echo "Executed: $*"
                 ;;
         esac
+        ;;
+    "launch")
+        echo "Launching project in browser"
+        ;;
+    "sequelace")
+        echo "Starting Sequel Ace"
+        ;;
+    "mailhog")
+        echo "Starting MailHog"
         ;;
     *)
         echo "Mock ddev executed with: $*"

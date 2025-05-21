@@ -166,4 +166,4 @@ SOFTWARE.
 
 Andre Witte
 
-[![Version](https://img.shields.io/badge/version-1.2.0-blue.svg)](https://github.com/akaw/dev-cli-tools/releases)
+[![Version](https://img.shields.io/badge/version-1.2.1-blue.svg)](https://github.com/akaw/dev-cli-tools/releases)

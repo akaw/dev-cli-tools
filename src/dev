@@ -6,13 +6,13 @@
 #
 # Description: dDEV shortening tools
 # Usage: dev [OPTIONS] [PARAMETERS]
-# Version: 1.2.0
+# Version: 1.2.1
 # https://github.com/akaw/dev-cli-tools/
 #
 # shellcheck disable=SC2034,SC2168,SC2317
 
 # Default Configuration
-VERSION="1.2.0"
+VERSION="1.2.1"
 DOCKER_ENVIRONMENT="${DOCKER_ENVIRONMENT:-orbstack}"
 BACKUP_DIR="${BACKUP_DIR:-.project/backups}"
 DB_EXPORT_FILE="${DB_EXPORT_FILE:-.project/db.sql.gz}"
@@ -20,6 +20,8 @@ DEFAULT_PHP_VERSION="${DEFAULT_PHP_VERSION:-8.2}"
 DEFAULT_NODE_VERSION="${DEFAULT_NODE_VERSION:-20}"
 DEFAULT_MYSQL_VERSION="${DEFAULT_MYSQL_VERSION:-8.0}"
 LOG_FILE="${LOG_FILE:-dev.log}"
+PREFERRED_EDITOR="${PREFERRED_EDITOR:-}"  # Empty default means no editor will be launched
+CONFIG_FILE="${CONFIG_FILE:-$HOME/.dev-cli-tools.conf}"
 
 OS=$(uname -s)
 
@@ -97,6 +99,19 @@ OPTIONS:
          --no-color      Disable colored output
          --no-deprecations  Suppress deprecation warnings
     -vv, --verbose       Verbose output
+
+CONFIGURATION:
+    setup                Run configuration wizard
+    
+    You can customize settings by running 'dev setup' or by editing:
+    $CONFIG_FILE
+    
+    Configuration options include:
+    - DOCKER_ENVIRONMENT: orbstack or docker
+    - PREFERRED_EDITOR: code, phpstorm, etc.
+    - DEFAULT_PHP_VERSION: 8.2, 8.1, etc.
+    - DEFAULT_NODE_VERSION: 20, 18, etc.
+    - LOG_LEVEL: INFO, DEBUG
 
 PROJECT:
     u,   up              Start project
@@ -190,15 +205,25 @@ msg() {
 
 # Default function to start the development environment
 # This function is called when no arguments are provided
-# u = up, seq = sequelace, l = logs, o = open in browser
 default() {
-    start_docker_environment
-    sleep 3
-    dev u
-    dev info
-    dev seq
-    dev o
-    code .
+    ensure_docker_environment
+    
+    # Check if DDEV project exists and start it
+    if ddev describe >/dev/null 2>&1; then
+        ensure_ddev_project
+        ddev describe
+        ddev sequelace
+        ddev launch
+    else
+        warn "No DDEV project found in current directory."
+        warn "Use 'ddev config' to initialize a new project or change to a project directory."
+    fi
+    
+    # Open editor if configured
+    if [[ -n "$PREFERRED_EDITOR" ]]; then
+        debug "Opening project in $PREFERRED_EDITOR"
+        $PREFERRED_EDITOR .
+    fi
 }
 
 # Function to upgrade the script
@@ -259,7 +284,11 @@ check_service_status() {
             return 1
         else
             debug "Checking OrbStack service via pgrep"
-            check_service_running "pgrep" "OrbStack"
+            if pgrep -f "OrbStack" >/dev/null && docker info >/dev/null 2>&1; then
+                debug "OrbStack is running (Linux) and Docker is operational"
+                return 0
+            fi
+            return 1
         fi
         ;;
     "docker")
@@ -366,8 +395,41 @@ start_service() {
     die "$service could not be started or is not operational (timeout after $((max_attempts*2))s). Please start $service manually."
 }
 
-# Function to start Docker environment
-start_docker_environment() {
+# Function to start Docker environment only if needed
+ensure_docker_environment() {
+    # Declare variable first, then assign value
+    local temp_marker
+    temp_marker="/tmp/dev_docker_verified_$(date +%Y%m%d)"
+    local marker_status=""
+    
+    # Always check Docker first if ALWAYS_CHECK_DOCKER is set
+    if [[ "${ALWAYS_CHECK_DOCKER:-}" == "true" ]]; then
+        debug "ALWAYS_CHECK_DOCKER is set, forcing Docker check"
+    # Otherwise check for marker
+    elif [[ -f "$temp_marker" ]]; then
+        marker_status=$(cat "$temp_marker" 2>/dev/null)
+        
+        # Skip verification if marker indicates Docker is running
+        if [[ "$marker_status" == "running" ]]; then
+            # Quick verify with docker command to be sure
+            if docker info >/dev/null 2>&1; then
+                debug "Docker environment verified as running (cached), skipping full check"
+                return 0
+            else
+                debug "Marker says Docker is running but it appears to be down, will check and restart"
+            fi
+        else
+            debug "Docker environment was previously checked but not running, will try to start it"
+        fi
+    fi
+    
+    debug "Verifying Docker environment..."
+    
+    # Check if DDEV is installed
+    if ! command -v ddev &>/dev/null; then
+        die "ddev is not installed. Please install ddev first."
+    fi
+    
     if [[ -z "${DOCKER_ENVIRONMENT:-}" ]]; then
         die "DOCKER_ENVIRONMENT is not set. Please set it to 'orbstack' or 'docker'"
     fi
@@ -379,46 +441,87 @@ start_docker_environment() {
         die "Invalid Docker environment: $DOCKER_ENVIRONMENT. Supported values are: orbstack, docker"
     fi
 
+    local docker_running=false
+    
     case "${DOCKER_ENVIRONMENT}" in
     "orbstack")
         if check_service_status "orbstack"; then
             info "OrbStack is already running and operational"
+            docker_running=true
         else
             info "Starting OrbStack..."
             if ! start_service "orbstack" "/Applications/OrbStack.app"; then
                 warn "Failed to automatically start OrbStack. Please start it manually."
                 warn "If OrbStack is already running, it might not be fully initialized or is in a broken state."
                 warn "Try restarting OrbStack manually and then run the command again."
+                
+                # Mark as not running in the marker file
+                echo "not_running" > "$temp_marker"
                 exit 1
             fi
+            
+            # Successfully started
+            docker_running=true
+            
+            # Wait for OrbStack to stabilize
+            info "Waiting 5 seconds for OrbStack to fully stabilize..."
+            sleep 5
         fi
-        # Always wait 5 seconds for OrbStack to stabilize
-        info "Waiting 5 seconds for OrbStack to fully stabilize..."
-        sleep 5
         ;;
     "docker")
         if check_service_status "docker"; then
             info "Docker is already running and operational"
+            docker_running=true
         else
             if [[ "$OS" == "Darwin" ]]; then
                 info "Starting Docker Desktop..."
                 if ! start_service "docker" "Docker"; then
                     warn "Failed to automatically start Docker Desktop. Please start it manually."
+                    
+                    # Mark as not running in the marker file
+                    echo "not_running" > "$temp_marker"
                     exit 1
                 fi
             else
                 info "Starting Docker service..."
                 if ! start_service "docker" "docker"; then
                     warn "Failed to automatically start Docker service. Please start it manually."
+                    
+                    # Mark as not running in the marker file
+                    echo "not_running" > "$temp_marker"
                     exit 1
                 fi
             fi
+            
+            # Successfully started
+            docker_running=true
+            
+            # Wait for Docker to stabilize
+            info "Waiting 5 seconds for Docker to fully stabilize..."
+            sleep 5
         fi
-        # Always wait 5 seconds for Docker to stabilize
-        info "Waiting 5 seconds for Docker to fully stabilize..."
-        sleep 5
         ;;
     esac
+    
+    # Double-check Docker is actually running before updating marker
+    if [[ "$docker_running" == "true" ]] && docker info >/dev/null 2>&1; then
+        echo "running" > "$temp_marker"
+        debug "Docker environment verified as running and marker updated"
+    else
+        echo "not_running" > "$temp_marker"
+        if [[ "$docker_running" == "true" ]]; then
+            warn "Docker appeared to start but is not operational, check your Docker/OrbStack installation"
+        else
+            debug "Docker environment verified as not running and marker updated"
+        fi
+    fi
+    
+    # Final verification - make sure Docker is actually running
+    if ! docker info >/dev/null 2>&1; then
+        die "Docker environment verification failed. Please start Docker/OrbStack manually and try again."
+    fi
+    
+    return 0
 }
 
 # Create project structure and initialize configuration
@@ -569,6 +672,140 @@ EOL
 
     debug "Build tools setup completed"
     return 0
+}
+
+# Load configuration from file
+load_config() {
+    if [[ -f "$CONFIG_FILE" ]]; then
+        debug "Loading configuration from $CONFIG_FILE"
+        # shellcheck source=/dev/null
+        source "$CONFIG_FILE"
+        return 0
+    else
+        debug "No configuration file found at $CONFIG_FILE"
+        return 1
+    fi
+}
+
+# Save configuration to file
+save_config() {
+    debug "Saving configuration to $CONFIG_FILE"
+    
+    # Create directory if it doesn't exist
+    mkdir -p "$(dirname "$CONFIG_FILE")"
+    
+    # Clear existing file
+    true > "$CONFIG_FILE"
+    
+    # Write configuration values
+    echo "# DEV CLI Tools Configuration" > "$CONFIG_FILE"
+    echo "# Generated on $(date)" >> "$CONFIG_FILE"
+    echo "" >> "$CONFIG_FILE"
+    
+    [[ -n "$DOCKER_ENVIRONMENT" ]] && echo "export DOCKER_ENVIRONMENT=\"$DOCKER_ENVIRONMENT\"" >> "$CONFIG_FILE"
+    [[ -n "$PREFERRED_EDITOR" ]] && echo "export PREFERRED_EDITOR=\"$PREFERRED_EDITOR\"" >> "$CONFIG_FILE"
+    [[ -n "$DEFAULT_PHP_VERSION" ]] && echo "export DEFAULT_PHP_VERSION=\"$DEFAULT_PHP_VERSION\"" >> "$CONFIG_FILE"
+    [[ -n "$DEFAULT_NODE_VERSION" ]] && echo "export DEFAULT_NODE_VERSION=\"$DEFAULT_NODE_VERSION\"" >> "$CONFIG_FILE"
+    [[ -n "$DEFAULT_MYSQL_VERSION" ]] && echo "export DEFAULT_MYSQL_VERSION=\"$DEFAULT_MYSQL_VERSION\"" >> "$CONFIG_FILE"
+    [[ -n "$LOG_LEVEL" ]] && echo "export LOG_LEVEL=\"$LOG_LEVEL\"" >> "$CONFIG_FILE"
+    
+    info "Configuration saved to $CONFIG_FILE"
+}
+
+# Setup configuration
+setup_config() {
+    info "Welcome to DEV CLI Tools Setup"
+    info "This will configure your preferences for DEV CLI Tools"
+    echo ""
+    
+    # Docker environment
+    echo "Select your preferred Docker environment:"
+    echo "1) OrbStack (recommended for macOS)"
+    echo "2) Docker Desktop"
+    echo "3) Native Docker (Linux)"
+    echo ""
+    read -r -p "Enter your choice [1-3, default: 1]: " docker_choice
+    
+    case "${docker_choice:-1}" in
+        1) DOCKER_ENVIRONMENT="orbstack" ;;
+        2) DOCKER_ENVIRONMENT="docker" ;;
+        3) DOCKER_ENVIRONMENT="docker" ;;
+        *) DOCKER_ENVIRONMENT="orbstack" ;;
+    esac
+    
+    echo ""
+    echo "Docker environment set to: $DOCKER_ENVIRONMENT"
+    echo ""
+    
+    # Preferred editor
+    echo "Select your preferred code editor:"
+    echo "1) No default editor"
+    echo "2) Visual Studio Code (code)"
+    echo "3) PhpStorm (phpstorm)"
+    echo "4) Sublime Text (subl)"
+    echo "5) Custom (specify command)"
+    echo ""
+    read -r -p "Enter your choice [1-5, default: 1]: " editor_choice
+    
+    case "${editor_choice:-1}" in
+        1) PREFERRED_EDITOR="" ;;
+        2) PREFERRED_EDITOR="code" ;;
+        3) PREFERRED_EDITOR="phpstorm" ;;
+        4) PREFERRED_EDITOR="subl" ;;
+        5) 
+            read -r -p "Enter the command to open your editor: " custom_editor
+            PREFERRED_EDITOR="$custom_editor"
+            ;;
+        *) PREFERRED_EDITOR="" ;;
+    esac
+    
+    if [[ -n "$PREFERRED_EDITOR" ]]; then
+        echo "Preferred editor set to: $PREFERRED_EDITOR"
+    else
+        echo "No default editor set"
+    fi
+    echo ""
+    
+    # Default PHP version
+    read -r -p "Enter default PHP version [default: 8.2]: " php_version
+    DEFAULT_PHP_VERSION="${php_version:-8.2}"
+    echo "Default PHP version set to: $DEFAULT_PHP_VERSION"
+    echo ""
+    
+    # Default Node.js version
+    read -r -p "Enter default Node.js version [default: 20]: " node_version
+    DEFAULT_NODE_VERSION="${node_version:-20}"
+    echo "Default Node.js version set to: $DEFAULT_NODE_VERSION"
+    echo ""
+    
+    # Default MySQL version
+    read -r -p "Enter default MySQL version [default: 8.0]: " mysql_version
+    DEFAULT_MYSQL_VERSION="${mysql_version:-8.0}"
+    echo "Default MySQL version set to: $DEFAULT_MYSQL_VERSION"
+    echo ""
+    
+    # Log level
+    echo "Select log level:"
+    echo "1) INFO (standard level, recommended)"
+    echo "2) DEBUG (verbose output for troubleshooting)"
+    echo ""
+    read -r -p "Enter your choice [1-2, default: 1]: " log_level_choice
+    
+    case "${log_level_choice:-1}" in
+        1) LOG_LEVEL="INFO" ;;
+        2) LOG_LEVEL="DEBUG" ;;
+        *) LOG_LEVEL="INFO" ;;
+    esac
+    
+    echo "Log level set to: $LOG_LEVEL"
+    echo ""
+    
+    # Save configuration
+    save_config
+    
+    info "Setup complete! Your preferences have been saved."
+    info "You can change these settings any time by running 'dev setup' again."
+    echo ""
 }
 
 # Parse command-line parameters
@@ -882,6 +1119,12 @@ parse_params() {
         upgrade
         ;;
 
+    setup)
+        debug "Setting up configuration..."
+        setup_config
+        exit 0
+        ;;
+
     *)
         debug "Executing command in container: $command $*"
         ddev exec "$command" "$@"
@@ -965,6 +1208,24 @@ main() {
     # Setup colors first
     setup_colors
 
+    # Load configuration if available
+    load_config || debug "No existing configuration found, using defaults"
+    
+    # Check if this is the first run and no configuration exists
+    if [[ ! -f "$CONFIG_FILE" ]]; then
+        info "This appears to be your first time running DEV CLI Tools."
+        info "Would you like to set up your preferences now?"
+        read -r -p "Run setup wizard? [Y/n]: " setup_response
+        case "${setup_response:-y}" in
+            [Yy]*)
+                setup_config
+                ;;
+            *)
+                info "You can run setup any time with 'dev setup'"
+                ;;
+        esac
+    fi
+
     # Enable debug logging if set
     if [[ "${LOG_LEVEL:-}" == "DEBUG" ]]; then
         debug "Debug mode enabled"
@@ -1014,53 +1275,47 @@ main() {
     exit 0
 }
 
-# Remove unreachable version check in execute_commands
+# Execute commands based on flags
 execute_commands() {
-    # First, ensure Docker environment is running for any DDEV-related commands
-    if [[ $console == 1 ]] || [[ $composer == 1 ]] || [[ $build == 1 ]] ||
-        [[ $watch == 1 ]] || [[ $exportdb == 1 ]] || [[ $importdb == 1 ]] ||
-        [[ $init == 1 ]] || [[ $test == 1 ]] || [[ $backup == 1 ]] ||
-        [[ $restore == 1 ]] || [[ $packages == 1 ]] || [[ $new == 1 ]] ||
-        [[ $start == 1 ]] || [[ $down == 1 ]] || [[ $restart == 1 ]] ||
-        [[ $status == 1 ]] || [[ $ssh == 1 ]] || [[ $sequelace == 1 ]] ||
-        [[ $launch == 1 ]] || [[ $deletecache == 1 ]]; then
-        
-        # Start the Docker environment before proceeding
-        debug "Ensuring Docker environment is running..."
-        start_docker_environment
-        
-        # Check if DDEV is installed
-        if ! command -v ddev &>/dev/null; then
-            die "ddev is not installed. Please install ddev first."
-        fi
-    fi
-
     # Execute console commands
     if [[ $console == 1 ]]; then
+        # Only verify Docker when actually needed
+        ensure_docker_environment
+        ensure_ddev_project
+        
         debug "Executing console command: $consoleparam"
         local console_flags=""
+        local env_vars=""
         
-        # Add --no-deprecations flag by default for Shopware console commands
+        # Add deprecation handling for Shopware console commands via environment variable
         if [[ -f "bin/console" && -d "vendor/shopware" ]]; then
-            console_flags+=" --no-deprecations"
-            debug "Automatically adding --no-deprecations flag for Shopware"
+            env_vars="SYMFONY_DEPRECATIONS_HELPER=weak"
+            debug "Automatically suppressing deprecation warnings for Shopware via SYMFONY_DEPRECATIONS_HELPER"
         fi
         
-        # Still respect explicit flag if set
-        [[ $no_deprecations == 1 ]] && console_flags+=" --no-deprecations"
+        # Still respect explicit flag if set, but use it only for logging purposes
+        [[ $no_deprecations == 1 ]] && debug "Deprecation warnings suppressed via user flag"
         [[ $verbose == 1 ]] && console_flags+=" -v"
         
-        ddev exec bin/console $console_flags "$consoleparam"
+        if [[ -n "$env_vars" ]]; then
+            ddev exec "$env_vars" bin/console "$console_flags" "$consoleparam"
+        else
+            ddev exec bin/console "$console_flags" "$consoleparam"
+        fi
     fi
 
     # Run composer commands
     if [[ $composer == 1 ]]; then
+        ensure_docker_environment
+        ensure_ddev_project
         debug "Running composer command: $composerparam"
         ddev composer "$composerparam"
     fi
 
     # Handle package requirements
     if [[ $require == 1 ]]; then
+        ensure_docker_environment
+        ensure_ddev_project
         debug "Adding package: $requireparam"
         if [[ $prefersource == 1 ]]; then
             ddev composer require "$requireparam" --prefer-source
@@ -1071,12 +1326,16 @@ execute_commands() {
 
     # Handle package removal
     if [[ $remove == 1 ]]; then
+        ensure_docker_environment
+        ensure_ddev_project
         debug "Removing package: $removeparam"
         ddev composer remove "$removeparam"
     fi
 
     # Build shopware components
     if [[ $build == 1 ]]; then
+        ensure_docker_environment
+        ensure_ddev_project
         debug "Building components: $buildparam"
         case "$buildparam" in
         "storefront" | "store" | "s")
@@ -1096,6 +1355,8 @@ execute_commands() {
 
     # Watch components
     if [[ $watch == 1 ]]; then
+        ensure_docker_environment
+        ensure_ddev_project
         debug "Watching components: $watchparam"
         case "$watchparam" in
         "storefront" | "store" | "s")
@@ -1112,11 +1373,15 @@ execute_commands() {
 
     # Database operations
     if [[ $exportdb == 1 ]]; then
+        ensure_docker_environment
+        ensure_ddev_project
         debug "Exporting database to: $exportdbparam"
         ddev export-db -f "$exportdbparam"
     fi
 
     if [[ $importdb == 1 ]]; then
+        ensure_docker_environment
+        ensure_ddev_project
         debug "Importing database from: $importdbparam"
         check_file_exists "$importdbparam"
         ddev import-db -f "$importdbparam"
@@ -1124,39 +1389,49 @@ execute_commands() {
 
     # Project operations
     if [[ $start == 1 ]]; then
+        ensure_docker_environment
         debug "Starting project..."
         ddev start
         ddev describe
     fi
 
     if [[ $down == 1 ]]; then
+        ensure_docker_environment
         debug "Stopping project..."
         ddev stop
     fi
 
     if [[ $restart == 1 ]]; then
+        ensure_docker_environment
         debug "Restarting project..."
         ddev restart
         ddev describe
     fi
 
     if [[ $status == 1 ]]; then
+        ensure_docker_environment
         debug "Showing project status..."
         ddev describe
     fi
 
     # Direct command execution
     if [[ $ssh == 1 ]]; then
+        ensure_docker_environment
+        ensure_ddev_project
         debug "Opening SSH connection..."
         ddev ssh
     fi
 
     if [[ $sequelace == 1 ]]; then
+        ensure_docker_environment
+        ensure_ddev_project
         debug "Starting Sequel Ace..."
         ddev sequelace
     fi
 
     if [[ $launch == 1 ]]; then
+        ensure_docker_environment
+        ensure_ddev_project
         if [[ -n "$launchparam" ]]; then
             debug "Opening specific URL: $launchparam"
             ddev launch "$launchparam"
@@ -1168,6 +1443,8 @@ execute_commands() {
 
     # Cache operations
     if [[ $deletecache == 1 ]]; then
+        ensure_docker_environment
+        ensure_ddev_project
         debug "Deleting cache files..."
         ddev exec rm -rf var/cache/dev*
         ddev exec rm -rf var/cache/prod*
@@ -1175,12 +1452,15 @@ execute_commands() {
 
     # Testing
     if [[ $test == 1 ]]; then
+        ensure_docker_environment
+        ensure_ddev_project
         debug "Running tests: ${testparam-}"
         ddev exec php bin/phpunit "${testparam-}"
     fi
 
     # Initialize project
     if [[ $init == 1 ]]; then
+        ensure_docker_environment
         debug "Initializing project..."
         read -r -p "Initialize DEV Environment? This will overwrite db and .env.local (y/n)?" choice
         case "$choice" in
@@ -1201,6 +1481,8 @@ execute_commands() {
 
     # Backup and restore
     if [[ $backup == 1 ]]; then
+        ensure_docker_environment
+        ensure_ddev_project
         debug "Creating backup..."
         mkdir -p "$BACKUP_DIR"
         local backup_file
@@ -1210,6 +1492,8 @@ execute_commands() {
     fi
 
     if [[ $restore == 1 ]]; then
+        ensure_docker_environment
+        ensure_ddev_project
         debug "Restoring from backup: ${restoreparam-backup.tar.gz}"
         check_file_exists "${restoreparam-backup.tar.gz}"
         ddev exec tar -xzf "${restoreparam-backup.tar.gz}"
@@ -1218,14 +1502,25 @@ execute_commands() {
 
     # Mail server
     if [[ $mail == 1 ]]; then
+        ensure_docker_environment
+        ensure_ddev_project
         debug "Starting mail server..."
         ddev mailhog
     fi
 
     # Package handling
     if [[ $packages == 1 ]]; then
+        ensure_docker_environment
+        ensure_ddev_project
         debug "Processing packages..."
         process_packages
+    fi
+    
+    # New project creation
+    if [[ $new == 1 ]]; then
+        ensure_docker_environment
+        debug "Creating new project of type: $newparam"
+        # Rest of new project creation code
     fi
 
     # Remove unnecessary variables
@@ -1291,6 +1586,30 @@ create_package_name() {
     name=$(echo "$name" | sed -e 's/-/ /g' -e 's/\b\(.\)/\u\1/g' -e 's/ //g')
 
     echo "$vendor$name"
+}
+
+# Function to ensure DDEV project is running
+ensure_ddev_project() {
+    debug "Ensuring DDEV project is running..."
+    
+    # First check if project exists
+    if ! ddev describe >/dev/null 2>&1; then
+        warn "No DDEV project found in current directory. Please initialize a DDEV project first."
+        return 1
+    fi
+    
+    # Check if project is already running
+    if ddev status | grep -q "running"; then
+        debug "DDEV project is already running"
+        return 0
+    else
+        info "DDEV project is not running, starting it now..."
+        if ! ddev start; then
+            die "Failed to start DDEV project. Please check for errors and try again."
+        fi
+        info "DDEV project started successfully"
+        return 0
+    fi
 }
 
 # Start execution

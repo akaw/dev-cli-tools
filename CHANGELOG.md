@@ -2,6 +2,24 @@
 
 All notable changes to the Development CLI Tools will be documented in this file.
 
+## [1.2.1] - 2024-05-21
+
+### Added
+- Added configuration system with setup wizard and user preferences
+- Added project auto-detection and startup for all DDEV commands
+- Added PREFERRED_EDITOR setting to customize editor choice
+
+### Changed
+- Improved Docker/OrbStack detection with status-based caching
+- Enhanced project auto-start behavior for all operations
+- Changed --no-deprecations to use environment variables instead of command flags
+- Reduced unnecessary Docker checks with intelligent status tracking
+
+### Fixed
+- Fixed critical issue with OrbStack detection not reliably starting containers
+- Fixed problem with commands failing when DDEV project wasn't started
+- Fixed invalid --no-deprecations flag usage with Symfony Console
+
 ## [1.2.0] - 2024-05-21
 
 ### Added
