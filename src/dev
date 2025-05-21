@@ -397,6 +397,12 @@ start_service() {
 
 # Function to start Docker environment only if needed
 ensure_docker_environment() {
+    # Skip docker checks in test mode
+    if [[ "${DEV_TEST_MODE:-}" == "true" ]]; then
+        debug "Test mode detected, skipping Docker environment check"
+        return 0
+    fi
+    
     # Declare variable first, then assign value
     local temp_marker
     temp_marker="/tmp/dev_docker_verified_$(date +%Y%m%d)"
@@ -676,13 +682,19 @@ EOL
 
 # Load configuration from file
 load_config() {
-    if [[ -f "$CONFIG_FILE" ]]; then
+    # Skip if we're in test mode
+    if [[ "${DEV_TEST_MODE:-}" == "true" ]]; then
+        debug "Test mode detected, skipping config loading"
+        return 0
+    fi
+    
+    if [[ -f "$CONFIG_FILE" && -r "$CONFIG_FILE" ]]; then
         debug "Loading configuration from $CONFIG_FILE"
         # shellcheck source=/dev/null
         source "$CONFIG_FILE"
         return 0
     else
-        debug "No configuration file found at $CONFIG_FILE"
+        debug "No configuration file found at $CONFIG_FILE or file not readable"
         return 1
     fi
 }
@@ -1590,6 +1602,12 @@ create_package_name() {
 
 # Function to ensure DDEV project is running
 ensure_ddev_project() {
+    # Skip project checks in test mode
+    if [[ "${DEV_TEST_MODE:-}" == "true" ]]; then
+        debug "Test mode detected, skipping DDEV project check"
+        return 0
+    fi
+    
     debug "Ensuring DDEV project is running..."
     
     # First check if project exists

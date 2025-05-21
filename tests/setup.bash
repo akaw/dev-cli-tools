@@ -30,6 +30,9 @@ mock_ddev() {
     export PATH
 }
 
+# Set test mode to skip environment checks
+export DEV_TEST_MODE="true"
+
 # Helper to run the dev script with specific parameters
 run_dev() {
     "${DEV_SCRIPT}" "$@"
