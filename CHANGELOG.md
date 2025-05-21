@@ -2,6 +2,31 @@
 
 All notable changes to the Development CLI Tools will be documented in this file.
 
+## [1.2.0] - 2024-05-21
+
+### Added
+- Added default `--no-deprecations` flag for all Shopware console commands
+- Improved OrbStack/Docker detection and initialization
+
+### Changed
+- Enhanced Docker service detection to verify operational status not just process existence
+- Added additional waiting time for Docker/OrbStack to fully stabilize
+- Improved error handling for service startup failures
+- Better error messages when services appear to be running but aren't fully initialized
+
+### Fixed
+- Fixed critical issue with OrbStack detection not checking for actual Docker operability
+
+## [1.1.9] - 2024-05-20
+
+### Added
+- Added `--no-deprecations` flag to suppress deprecation warnings in Shopware console commands
+- Added `-vv` / `--verbose` flag for verbose output in console commands
+
+### Changed
+- Improved console command execution with flexible flag support
+- Updated documentation with new command-line options
+
 ## [1.1.8] - 2025-05-16
 
 ### Fixed

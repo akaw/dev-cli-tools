@@ -6,13 +6,13 @@
 #
 # Description: dDEV shortening tools
 # Usage: dev [OPTIONS] [PARAMETERS]
-# Version: 1.1.8
+# Version: 1.2.0
 # https://github.com/akaw/dev-cli-tools/
 #
 # shellcheck disable=SC2034,SC2168,SC2317
 
 # Default Configuration
-VERSION="1.1.8"
+VERSION="1.2.0"
 DOCKER_ENVIRONMENT="${DOCKER_ENVIRONMENT:-orbstack}"
 BACKUP_DIR="${BACKUP_DIR:-.project/backups}"
 DB_EXPORT_FILE="${DB_EXPORT_FILE:-.project/db.sql.gz}"
@@ -95,6 +95,8 @@ OPTIONS:
     -h,  --help          Show this help
     -v,  --version       Show version
          --no-color      Disable colored output
+         --no-deprecations  Suppress deprecation warnings
+    -vv, --verbose       Verbose output
 
 PROJECT:
     u,   up              Start project
@@ -143,7 +145,7 @@ SHOPWARE:
     plde | plugin:deactivate  Deactivate plugin
     plin | plugin:install     Install plugin
     plun | plugin:uninstall   Uninstall plugin
-    plup | plugin:update      Update plugin
+    pu | plup | pl:up | plugin:update      Update plugin
 
 Examples:
     dev        Start development environment 
@@ -239,12 +241,19 @@ check_service_status() {
     case "$env" in
     "orbstack")
         if [[ "$OS" == "Darwin" ]]; then
-            # Alternative methods to check if OrbStack is running
+            # First check OrbStack process/socket existence
             if pgrep -f "OrbStack" >/dev/null ||
                 launchctl list | grep -q "com.orbstack.OrbStack" ||
                 [[ -S "$HOME/.orbstack/run/docker.sock" ]]; then
-                debug "OrbStack is running (detected via process/socket)"
-                return 0
+                
+                # Additionally verify Docker is operational by running a simple command
+                if docker info >/dev/null 2>&1; then
+                    debug "OrbStack is running and Docker is operational"
+                    return 0
+                else
+                    debug "OrbStack process detected but Docker is not operational"
+                    return 1
+                fi
             fi
             debug "OrbStack is not running"
             return 1
@@ -256,10 +265,29 @@ check_service_status() {
     "docker")
         if [[ "$OS" == "Darwin" ]]; then
             debug "Checking Docker Desktop service via launchctl"
-            check_service_running "launchctl" "com.docker.docker"
+            if launchctl list | grep -q "com.docker.docker"; then
+                # Verify Docker is actually operational
+                if docker info >/dev/null 2>&1; then
+                    debug "Docker Desktop is running and operational"
+                    return 0
+                else
+                    debug "Docker Desktop process detected but not operational"
+                    return 1
+                fi
+            fi
+            return 1
         else
             debug "Checking Docker service via systemctl"
-            check_service_running "systemctl" "docker"
+            if systemctl is-active --quiet "docker"; then
+                if docker info >/dev/null 2>&1; then
+                    debug "Docker service is running and operational"
+                    return 0
+                else
+                    debug "Docker service detected but not operational"
+                    return 1
+                fi
+            fi
+            return 1
         fi
         ;;
     *)
@@ -320,22 +348,22 @@ start_service() {
         ;;
     esac
 
-    local max_attempts=10
+    local max_attempts=30
     local attempt=1
 
-    debug "Waiting up to ${max_attempts}s for $service to start"
+    debug "Waiting up to ${max_attempts}s for $service to start and become operational"
 
     while [ $attempt -le $max_attempts ]; do
         if check_service_status "$env"; then
-            info "$service is ready (after ${attempt}s)"
+            info "$service is ready and operational (after ${attempt}s)"
             return 0
         fi
-        debug "Waiting for $service (attempt $attempt of $max_attempts)..."
-        sleep 1
+        debug "Waiting for $service to become operational (attempt $attempt of $max_attempts)..."
+        sleep 2
         attempt=$((attempt + 1))
     done
 
-    die "$service could not be started (timeout after ${max_attempts}s)"
+    die "$service could not be started or is not operational (timeout after $((max_attempts*2))s). Please start $service manually."
 }
 
 # Function to start Docker environment
@@ -354,30 +382,41 @@ start_docker_environment() {
     case "${DOCKER_ENVIRONMENT}" in
     "orbstack")
         if check_service_status "orbstack"; then
-            info "OrbStack is already running"
+            info "OrbStack is already running and operational"
         else
-            start_service "orbstack" "/Applications/OrbStack.app"
-            # Add a short delay to ensure OrbStack is fully initialized
-            info "Waiting for OrbStack to fully initialize..."
-            sleep 5
+            info "Starting OrbStack..."
+            if ! start_service "orbstack" "/Applications/OrbStack.app"; then
+                warn "Failed to automatically start OrbStack. Please start it manually."
+                warn "If OrbStack is already running, it might not be fully initialized or is in a broken state."
+                warn "Try restarting OrbStack manually and then run the command again."
+                exit 1
+            fi
         fi
+        # Always wait 5 seconds for OrbStack to stabilize
+        info "Waiting 5 seconds for OrbStack to fully stabilize..."
+        sleep 5
         ;;
     "docker")
         if check_service_status "docker"; then
-            info "Docker is already running"
+            info "Docker is already running and operational"
         else
             if [[ "$OS" == "Darwin" ]]; then
-                start_service "docker" "Docker"
-                # Add a short delay to ensure Docker is fully initialized
-                info "Waiting for Docker to fully initialize..."
-                sleep 5
+                info "Starting Docker Desktop..."
+                if ! start_service "docker" "Docker"; then
+                    warn "Failed to automatically start Docker Desktop. Please start it manually."
+                    exit 1
+                fi
             else
-                start_service "docker" "docker"
-                # Add a short delay to ensure Docker is fully initialized
-                info "Waiting for Docker to fully initialize..."
-                sleep 5
+                info "Starting Docker service..."
+                if ! start_service "docker" "docker"; then
+                    warn "Failed to automatically start Docker service. Please start it manually."
+                    exit 1
+                fi
             fi
         fi
+        # Always wait 5 seconds for Docker to stabilize
+        info "Waiting 5 seconds for Docker to fully stabilize..."
+        sleep 5
         ;;
     esac
 }
@@ -782,7 +821,7 @@ parse_params() {
         [[ -n "${1-}" ]] && shift
         ;;
 
-    plup | pl:up | plugin:update)
+    pu | plup | pl:up | plugin:update)
         debug "Updating plugin..."
         console=1
         consoleparam="plugin:update ${1-}"
@@ -883,6 +922,8 @@ init_command_flags() {
     # Console commands
     console=0
     consoleparam=""
+    no_deprecations=0
+    verbose=0
 
     # Build commands
     build=0
@@ -938,6 +979,14 @@ main() {
             NO_COLOR=1
             shift
             ;;
+        --no-deprecations)
+            no_deprecations=1
+            shift
+            ;;
+        -vv | --verbose)
+            verbose=1
+            shift
+            ;;
         -v | --version)
             version
             exit 0
@@ -989,7 +1038,19 @@ execute_commands() {
     # Execute console commands
     if [[ $console == 1 ]]; then
         debug "Executing console command: $consoleparam"
-        ddev exec bin/console "$consoleparam"
+        local console_flags=""
+        
+        # Add --no-deprecations flag by default for Shopware console commands
+        if [[ -f "bin/console" && -d "vendor/shopware" ]]; then
+            console_flags+=" --no-deprecations"
+            debug "Automatically adding --no-deprecations flag for Shopware"
+        fi
+        
+        # Still respect explicit flag if set
+        [[ $no_deprecations == 1 ]] && console_flags+=" --no-deprecations"
+        [[ $verbose == 1 ]] && console_flags+=" -v"
+        
+        ddev exec bin/console $console_flags "$consoleparam"
     fi
 
     # Run composer commands

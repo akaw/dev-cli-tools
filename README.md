@@ -2,7 +2,7 @@
 
 CLI tool to simplify daily development work with DDEV, Shopware and Symfony.
 
-[![Version](https://img.shields.io/badge/version-1.1.8-blue.svg)](https://github.com/akaw/dev-cli-tools/releases)
+[![Version](https://img.shields.io/badge/version-1.2.0-blue.svg)](https://github.com/akaw/dev-cli-tools/releases)
 [![Build Status](https://github.com/akaw/dev-cli-tools/actions/workflows/test.yml/badge.svg)](https://github.com/akaw/dev-cli-tools/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Shellcheck](https://img.shields.io/badge/shellcheck-passing-brightgreen.svg)](https://www.shellcheck.net/)
@@ -146,6 +146,7 @@ dev bin/console debug:router
   - `dev pl` - List plugins
   - `dev pa` - Activate plugin
   - `dev pd` - Deactivate plugin
+  - `dev pu` - Update plugin
 
 ### Project
 - `dev n` - New project
