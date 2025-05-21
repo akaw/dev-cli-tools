@@ -1220,31 +1220,6 @@ main() {
     # Setup colors first
     setup_colors
 
-    # Load configuration if available
-    load_config || debug "No existing configuration found, using defaults"
-    
-    # Check if this is the first run and no configuration exists
-    if [[ ! -f "$CONFIG_FILE" ]]; then
-        info "This appears to be your first time running DEV CLI Tools."
-        info "Would you like to set up your preferences now?"
-        read -r -p "Run setup wizard? [Y/n]: " setup_response
-        case "${setup_response:-y}" in
-            [Yy]*)
-                setup_config
-                ;;
-            *)
-                info "You can run setup any time with 'dev setup'"
-                ;;
-        esac
-    fi
-
-    # Enable debug logging if set
-    if [[ "${LOG_LEVEL:-}" == "DEBUG" ]]; then
-        debug "Debug mode enabled"
-        debug "Operating system: $OS"
-        debug "Docker environment: ${DOCKER_ENVIRONMENT:-not set}"
-    fi
-
     # Handle global options
     while [[ "${1-}" =~ ^- ]]; do
         case "${1-}" in
@@ -1273,6 +1248,31 @@ main() {
             ;;
         esac
     done
+
+    # Load configuration if available
+    load_config || debug "No existing configuration found, using defaults"
+    
+    # Skip configuration setup in test mode or for special commands
+    if [[ ! "${DEV_TEST_MODE:-}" == "true" ]] && [[ ! -f "$CONFIG_FILE" ]]; then
+        info "This appears to be your first time running DEV CLI Tools."
+        info "Would you like to set up your preferences now?"
+        read -r -p "Run setup wizard? [Y/n]: " setup_response
+        case "${setup_response:-y}" in
+            [Yy]*)
+                setup_config
+                ;;
+            *)
+                info "You can run setup any time with 'dev setup'"
+                ;;
+        esac
+    fi
+
+    # Enable debug logging if set
+    if [[ "${LOG_LEVEL:-}" == "DEBUG" ]]; then
+        debug "Debug mode enabled"
+        debug "Operating system: $OS"
+        debug "Docker environment: ${DOCKER_ENVIRONMENT:-not set}"
+    fi
 
     # No arguments provided
     if [ $# -eq 0 ]; then
