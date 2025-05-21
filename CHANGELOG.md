@@ -2,6 +2,14 @@
 
 All notable changes to the Development CLI Tools will be documented in this file.
 
+## [1.2.2] - 2024-05-21
+
+### Fixed
+- Fixed setup wizard appearing unexpectedly during automated testing
+- Added test mode to ensure CI compatibility
+- Improved command execution order to prioritize version/help commands
+- Fixed shellcheck warnings in configuration tools
+
 ## [1.2.1] - 2024-05-21
 
 ### Added
