@@ -22,6 +22,7 @@ DEFAULT_MYSQL_VERSION="${DEFAULT_MYSQL_VERSION:-8.0}"
 LOG_FILE="${LOG_FILE:-dev.log}"
 PREFERRED_EDITOR="${PREFERRED_EDITOR:-}"  # Empty default means no editor will be launched
 CONFIG_FILE="${CONFIG_FILE:-$HOME/.dev-cli-tools.conf}"
+AUTO_START_PROJECT="${AUTO_START_PROJECT:-true}"  # Control project auto-start
 
 OS=$(uname -s)
 
@@ -98,6 +99,7 @@ OPTIONS:
     -v,  --version       Show version
          --no-color      Disable colored output
          --no-deprecations  Suppress deprecation warnings
+         --no-autostart  Do not automatically start DDEV project
     -vv, --verbose       Verbose output
 
 CONFIGURATION:
@@ -720,6 +722,7 @@ save_config() {
     [[ -n "$DEFAULT_NODE_VERSION" ]] && echo "export DEFAULT_NODE_VERSION=\"$DEFAULT_NODE_VERSION\"" >> "$CONFIG_FILE"
     [[ -n "$DEFAULT_MYSQL_VERSION" ]] && echo "export DEFAULT_MYSQL_VERSION=\"$DEFAULT_MYSQL_VERSION\"" >> "$CONFIG_FILE"
     [[ -n "$LOG_LEVEL" ]] && echo "export LOG_LEVEL=\"$LOG_LEVEL\"" >> "$CONFIG_FILE"
+    [[ -n "$AUTO_START_PROJECT" ]] && echo "export AUTO_START_PROJECT=\"$AUTO_START_PROJECT\"" >> "$CONFIG_FILE"
     
     info "Configuration saved to $CONFIG_FILE"
 }
@@ -776,6 +779,22 @@ setup_config() {
     else
         echo "No default editor set"
     fi
+    echo ""
+    
+    # Auto-start project setting
+    echo "Do you want projects to auto-start when needed?"
+    echo "1) Yes, automatically start projects (recommended)"
+    echo "2) No, I'll start projects manually"
+    echo ""
+    read -r -p "Enter your choice [1-2, default: 1]: " autostart_choice
+    
+    case "${autostart_choice:-1}" in
+        1) AUTO_START_PROJECT="true" ;;
+        2) AUTO_START_PROJECT="false" ;;
+        *) AUTO_START_PROJECT="true" ;;
+    esac
+    
+    echo "Auto-start project setting: $AUTO_START_PROJECT"
     echo ""
     
     # Default PHP version
@@ -1178,6 +1197,7 @@ init_command_flags() {
     console=0
     consoleparam=""
     no_deprecations=0
+    no_autostart=0
     verbose=0
 
     # Build commands
@@ -1229,6 +1249,10 @@ main() {
             ;;
         --no-deprecations)
             no_deprecations=1
+            shift
+            ;;
+        --no-autostart)
+            no_autostart=1
             shift
             ;;
         -vv | --verbose)
@@ -1621,12 +1645,20 @@ ensure_ddev_project() {
         debug "DDEV project is already running"
         return 0
     else
-        info "DDEV project is not running, starting it now..."
-        if ! ddev start; then
-            die "Failed to start DDEV project. Please check for errors and try again."
+        # Check if auto-start is enabled
+        if [[ "$AUTO_START_PROJECT" == "true" && "$no_autostart" != "1" ]]; then
+            info "DDEV project is not running, starting it now..."
+            if ! ddev start; then
+                die "Failed to start DDEV project. Please check for errors and try again."
+            fi
+            info "DDEV project started successfully"
+            return 0
+        else
+            # Auto-start disabled, just warn
+            warn "DDEV project is not running. Use 'ddev start' to start it, or enable auto-start."
+            warn "To enable auto-start, set AUTO_START_PROJECT=true or remove --no-autostart flag."
+            return 1
         fi
-        info "DDEV project started successfully"
-        return 0
     fi
 }
 
