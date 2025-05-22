@@ -8,6 +8,7 @@ All notable changes to the Development CLI Tools will be documented in this file
 - Fixed build commands (bs/build:storefront, ba/build:administration, etc.) still causing unnecessary container restarts
 - Updated all command handlers to use the new optimized container check function
 - Consistently implemented container detection across all tool commands
+- Fixed shellcheck warnings related to masking return values and quoting
 
 ### Changed
 - Refactored duplicate container check code in all command handlers

@@ -848,7 +848,8 @@ check_for_updates() {
     fi
     
     # Skip if we've already checked recently (within 24 hours)
-    local update_marker="/tmp/dev_update_check_$(date +%Y%m%d)"
+    local update_marker
+    update_marker="/tmp/dev_update_check_$(date +%Y%m%d)"
     if [[ -f "$update_marker" ]]; then
         debug "Update already checked today, skipping check"
         return 0
@@ -1371,9 +1372,9 @@ execute_commands() {
             # Add deprecation handling for Shopware console commands via environment variable
             if [[ -f "bin/console" && -d "vendor/shopware" ]]; then
                 debug "Automatically suppressing deprecation warnings for Shopware via SYMFONY_DEPRECATIONS_HELPER"
-                ddev exec SYMFONY_DEPRECATIONS_HELPER=weak bin/console cache:clear $console_flags
+                ddev exec SYMFONY_DEPRECATIONS_HELPER=weak bin/console cache:clear "$console_flags"
             else
-                ddev exec bin/console cache:clear $console_flags
+                ddev exec bin/console cache:clear "$console_flags"
             fi
             return 0
         fi
