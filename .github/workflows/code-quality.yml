@@ -1,0 +1,88 @@
+name: Code-Qualitätsprüfung
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  shellcheck:
+    name: ShellCheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Run ShellCheck
+        uses: ludeeus/action-shellcheck@master
+        with:
+          severity: warning
+          check_together: 'yes'
+          scandir: './src'
+  
+  version-check:
+    name: Versionskonsistenz
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Prüfe Version in README und Skript
+        run: |
+          README_VERSION=$(grep -o "version-[0-9.]*" README.md | head -1 | cut -d'-' -f2)
+          SCRIPT_VERSION=$(grep "^VERSION=" src/dev | cut -d'"' -f2)
+          
+          echo "README Version: $README_VERSION"
+          echo "Script Version: $SCRIPT_VERSION"
+          
+          if [ "$README_VERSION" != "$SCRIPT_VERSION" ]; then
+            echo "Versionen stimmen nicht überein!"
+            exit 1
+          else
+            echo "Versionen stimmen überein: $SCRIPT_VERSION"
+          fi
+
+  formatting:
+    name: Formatierung
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Prüfe Zeilenlänge
+        run: |
+          # Prüfe auf Zeilen länger als 120 Zeichen (ausgenommen Kommentare und Strings)
+          ! grep -v '^\s*#' src/dev | grep -v '"\|'\'' | grep -E '.{120,}'
+          
+      - name: Prüfe Einrückung
+        run: |
+          # Prüfe, dass Einrückung mit 4 Spaces erfolgt
+          ! grep -E '^\t' src/dev
+          
+      - name: Prüfe Trailing Whitespace
+        run: |
+          # Prüfe auf Whitespace am Ende der Zeilen
+          ! grep -E '\s+$' src/dev
+
+  bash-syntax:
+    name: Bash Syntax
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Syntax-Check für Bash-Skripte
+        run: |
+          bash -n src/dev
+          
+  executable-check:
+    name: Ausführbar-Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Prüfe Ausführbarkeit des Skripts
+        run: |
+          if [ ! -x src/dev ]; then
+            echo "Das Skript src/dev ist nicht ausführbar!"
+            exit 1
+          else
+            echo "Das Skript src/dev ist ausführbar."
+          fi 
