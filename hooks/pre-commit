@@ -3,7 +3,7 @@
 # Pre-commit hook für Dev-CLI-Tools
 # Führt grundlegende Codequalitätsprüfungen durch
 
-# Debug-Modus aktivieren falls gewünscht
+# Debug-Modus aktivieren falls gewünsch
 # set -x
 
 # Fehler beenden den Hook
@@ -29,7 +29,7 @@ fi
 echo "✓ Prüfe Bash-Syntax..."
 bash -n src/dev
 
-# Prüfe Ausführbarkeit
+# Prüfe Ausführbarkei
 echo "✓ Prüfe Ausführbarkeit des Skripts..."
 if [ ! -x src/dev ]; then
   echo "❌ Das Skript src/dev ist nicht ausführbar!"
@@ -71,4 +71,4 @@ fi
 echo "    Keine zu langen Zeilen gefunden"
 
 echo "✅ Alle Pre-commit Prüfungen bestanden!"
-exit 0 
+exit 0

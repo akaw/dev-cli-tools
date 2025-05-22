@@ -23,16 +23,16 @@ fi
 if [ -d "tests" ] && [ -f "tests/test_dev.bats" ]; then
   if command -v bats &>/dev/null; then
     echo "✓ Führe BATS-Tests aus..."
-    
+
     # Setze Testmodus, um Docker-Prüfungen zu überspringen
     export DEV_TEST_MODE=true
-    
+
     bats tests/test_dev.bats || {
       echo "❌ BATS-Tests fehlgeschlagen!"
       unset DEV_TEST_MODE
       exit 1
     }
-    
+
     unset DEV_TEST_MODE
   else
     echo "⚠️ BATS ist nicht installiert - überspringe Tests"
@@ -43,4 +43,4 @@ else
 fi
 
 echo "✅ Alle Pre-push Prüfungen bestanden!"
-exit 0 
+exit 0

@@ -3,8 +3,8 @@
 Dieses Dokument beschreibt unsere Test-Strategie für die Dev-CLI-Tools. Wir verwenden einen mehrstufigen Ansatz:
 
 1. **Lokale Tests vor Commits und Pushs**: Git Hooks führen Tests automatisch aus
-2. **Code-Qualitätsprüfungen** werden automatisch auf GitHub durchgeführt
-3. **Detaillierte Funktionstests** werden bei Bedarf lokal durchgeführt
+2. **Code-Qualitätsprüfungen** werden automatisch auf GitHub durchgeführ
+3. **Detaillierte Funktionstests** werden bei Bedarf lokal durchgeführ
 
 ## Lokale Git Hooks
 
@@ -13,9 +13,9 @@ Das Repository enthält vorkonfigurierte Git Hooks, die automatisch ausgeführt 
 ### Pre-Commit Hook
 
 Vor jedem Commit werden folgende Prüfungen durchgeführt:
-- Versionskonsistenz zwischen README.md und Skript
+- Versionskonsistenz zwischen README.md und Skrip
 - Bash-Syntax-Prüfung
-- Ausführbarkeits-Check für das Skript
+- Ausführbarkeits-Check für das Skrip
 - Formatierungsprüfungen:
   - Keine Tabs (nur Spaces)
   - Kein Trailing Whitespace
@@ -47,7 +47,7 @@ Alternativ kannst du auch den Hooks-Pfad direkt auf das hooks-Verzeichnis setzen
 git config core.hooksPath hooks
 ```
 
-## GitHub-Workflows für Code-Qualität
+## GitHub-Workflows für Code-Qualitä
 
 Der automatisierte Workflow `.github/workflows/code-quality.yml` führt folgende Prüfungen bei jedem Push und Pull Request durch:
 
@@ -90,8 +90,8 @@ DEV_TEST_MODE=true bats tests/test_dev.bats
 
 - Bash
 - ShellCheck installiert (`brew install shellcheck`)
-- DDEV installiert
-- Docker oder OrbStack installiert
+- DDEV installier
+- Docker oder OrbStack installier
 - Bats-Core installiert (`brew install bats-core`)
 
 ### Hinzufügen neuer Tests
@@ -127,4 +127,4 @@ shellcheck src/dev
 
 # BATS-Tests ausführen (wenn vorhanden)
 DEV_TEST_MODE=true bats tests/test_dev.bats
-``` 
+```

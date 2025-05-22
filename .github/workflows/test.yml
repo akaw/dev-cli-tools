@@ -1,4 +1,4 @@
-name: Test
+name: Tes
 
 on:
   push:
@@ -8,22 +8,22 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-lates
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup environment
+      - name: Setup environmen
         run: |
           sudo apt-get update
           sudo apt-get install -y shellcheck
           # Install Bats testing framework
-          git clone https://github.com/bats-core/bats-core.git
+          git clone https://github.com/bats-core/bats-core.gi
           cd bats-core
           sudo ./install.sh /usr/local
           cd ..
           # Install Bats support libraries
-          git clone https://github.com/bats-core/bats-support.git
-          git clone https://github.com/bats-core/bats-assert.git
+          git clone https://github.com/bats-core/bats-support.gi
+          git clone https://github.com/bats-core/bats-assert.gi
 
       - name: Check script permissions
         run: |
@@ -33,7 +33,7 @@ jobs:
       - name: Run shellcheck
         run: shellcheck src/dev
 
-      - name: Test version output
+      - name: Test version outpu
         run: ./src/dev --version
 
       - name: Check script syntax

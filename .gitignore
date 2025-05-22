@@ -2,7 +2,7 @@
 *.log
 dev.log
 
-# Environment
+# Environmen
 .env
 
 # Project specific

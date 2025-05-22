@@ -16,7 +16,7 @@ graph TB
     User([User]) --> |commands| CLI[CLI Interface]
     CLI --> |parses| Parser[Command Parser]
     Parser --> |executes| CommandExecutor[Command Executor]
-    
+
     subgraph Core Components
         CommandExecutor --> ProjectMgmt[Project Management]
         CommandExecutor --> DBOps[Database Operations]
@@ -33,7 +33,7 @@ graph TB
         ShopwareTools --> |builds| Shopware[Shopware]
     end
 
-    subgraph Environment
+    subgraph Environmen
         DDEV --> |uses| Docker[Docker/OrbStack]
         Database --> |runs in| Docker
     end
@@ -91,7 +91,7 @@ The script is self-contained and can be placed in any location of your choice. J
 - Project management (start, stop, restart)
 - Database operations (import, export)
 - Development tools (xdebug, logs, tests)
-- Composer management
+- Composer managemen
 - Shopware specific commands
 
 ### Direct Command Execution
@@ -110,10 +110,10 @@ dev bin/console debug:router
 
 ## Command Shortcuts
 
-### Project Management
+### Project Managemen
 - `dev u` - Start project (up)
 - `dev d` - Stop project (down)
-- `dev r` - Restart project
+- `dev r` - Restart projec
 - `dev st` - Show status
 - `dev o` - Open in browser
 
@@ -123,7 +123,7 @@ dev bin/console debug:router
 - `dev sq` - Open Sequel Ace
 - `dev mi` - Run migrations
 
-### Development
+### Developmen
 - `dev x` - Toggle xdebug
 - `dev t` - Run tests
 - `dev l` - Show logs
@@ -148,15 +148,15 @@ dev bin/console debug:router
   - `dev pd` - Deactivate plugin
   - `dev pu` - Update plugin
 
-### Project
-- `dev n` - New project
+### Projec
+- `dev n` - New projec
 - `dev bk` - Backup
 - `dev rs` - Restore
 
 ## Examples
 
 ```bash
-# Start project
+# Start projec
 dev u
 
 # Import database
@@ -169,14 +169,14 @@ dev i
 dev b s
 ```
 
-## Development
+## Developmen
 
 Contributions are welcome! Please note:
 
 1. Fork the repository
 2. Create feature branch
 3. Commit changes
-4. Create pull request
+4. Create pull reques
 
 ### Development Setup Tip
 
@@ -206,7 +206,7 @@ bats tests/unit tests/integration
 
 This project is licensed under the MIT License.
 
-```text
+```tex
 MIT License
 
 Copyright (c) 2024 Andre Witte

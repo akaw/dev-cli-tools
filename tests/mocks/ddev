@@ -48,7 +48,7 @@ case "$1" in
         ;;
     "exec")
         # Handle various exec commands
-        shift
+        shif
         case "$1" in
             "composer")
                 echo "Running composer ${*:2}..."
@@ -89,4 +89,4 @@ case "$1" in
         ;;
 esac
 
-exit 0 
+exit 0

@@ -53,7 +53,7 @@ Das Skript ist eigenständig und kann an jedem beliebigen Ort platziert werden. 
 
 ## Befehlsabkürzungen
 
-### Projekt-Management
+### Projekt-Managemen
 - `dev u` - Projekt starten (up)
 - `dev d` - Projekt stoppen (down)
 - `dev r` - Projekt neu starten
@@ -90,8 +90,8 @@ Das Skript ist eigenständig und kann an jedem beliebigen Ort platziert werden. 
   - `dev pa` - Plugin aktivieren
   - `dev pd` - Plugin deaktivieren
 
-### Projekt
-- `dev n` - Neues Projekt
+### Projek
+- `dev n` - Neues Projek
 - `dev bk` - Backup
 - `dev rs` - Wiederherstellen
 
@@ -138,7 +138,7 @@ Beiträge sind willkommen! Bitte beachten:
 
 Dieses Projekt ist unter der MIT-Lizenz lizenziert.
 
-```text
+```tex
 MIT License
 
 Copyright (c) 2024 Andre Witte

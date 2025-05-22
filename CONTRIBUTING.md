@@ -8,7 +8,7 @@
 4. Run local tests
 5. Commit your changes (`git commit -m 'feat: Add amazing feature'`)
 6. Push to the branch (`git push origin feature/amazing-feature`)
-7. Open a Pull Request
+7. Open a Pull Reques
 
 ## Commit Message Guidelines
 
@@ -54,6 +54,6 @@ Types:
 ## Pull Request Process
 
 1. Update the README.md with details of changes if needed
-2. Update the CHANGELOG.md following the existing format
+2. Update the CHANGELOG.md following the existing forma
 3. Update the version numbers following [SemVer](https://semver.org/)
 4. The PR will be merged once you have the sign-off

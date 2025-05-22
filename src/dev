@@ -61,7 +61,7 @@ log() {
     # Check if logging is enabled for this level
     [[ $level == "DEBUG" && $LOG_LEVEL != "DEBUG" ]] && return
 
-    # Formatted output
+    # Formatted outpu
     local output="${COLORS[TIMESTAMP]}${timestamp}${COLORS[RESET]} "
     output+="${COLORS[BOLD]}${COLORS[$level]}${level}${COLORS[RESET]} "
     output+="${message}"
@@ -96,9 +96,9 @@ USAGE:
 OPTIONS:
     -h,  --help          Show this help
     -v,  --version       Show version
-         --no-color      Disable colored output
+         --no-color      Disable colored outpu
          --no-deprecations  Suppress deprecation warnings
-    -vv, --verbose       Verbose output
+    -vv, --verbose       Verbose outpu
 
 CONFIGURATION:
     setup                Run configuration wizard
@@ -112,13 +112,13 @@ CONFIGURATION:
     - LOG_LEVEL: INFO, DEBUG
 
 PROJECT:
-    u,   up              Start project
-    d,   down            Stop project
-    r,   restart         Restart project
+    u,   up              Start projec
+    d,   down            Stop projec
+    r,   restart         Restart projec
     st,  status          Show project status
     o,   open            Open in browser
     s,   ssh             Connect via SSH
-    init                 Initialize project
+    init                 Initialize projec
 
 DATABASE:
     e,   export [file]   Export database (.project/db.sql.gz)
@@ -151,8 +151,8 @@ COMPOSER:
 SHOPWARE:
     b | build [comp]          Build components (js|admin|store)
     ba | build:administration Build administration
-    bs | build:storefront     Build storefront
-    bj | build:js             Build JavaScript
+    bs | build:storefront     Build storefron
+    bj | build:js             Build JavaScrip
     w | watch [comp]          Watch components
     cc | cache:clear          Clear cache
     cd | cache:delete         Delete cache files
@@ -166,17 +166,17 @@ SHOPWARE:
     pu | plup | pl:up | plugin:update      Update plugin
 
 Examples:
-    dev        Start development environment
-    dev u      Start project
+    dev        Start development environmen
+    dev u      Start projec
     dev ci     Composer Install
-    dev new    Create new project
+    dev new    Create new projec
     dev ba     bin/build-administration
     dev x on   Enable xdebug
 EOF
     exit 0
 }
 
-# Simple versioning and message output
+# Simple versioning and message outpu
 version() {
     echo -e "dev-cli-tools ${VERSION}\nhttps://github.com/akaw/dev-cli-tools/"
     exit 0
@@ -187,13 +187,13 @@ cleanup() {
     trap - SIGINT SIGTERM ERR EXIT
     # Stop all running processes
     jobs -p | xargs -r kill
-    # Remove temporary files if they exist
+    # Remove temporary files if they exis
     if [ -n "${TEMP_DIR-}" ] && [ -d "$TEMP_DIR" ]; then
         rm -rf "$TEMP_DIR"
     fi
 }
 
-# Simplified color output
+# Simplified color outpu
 setup_colors() {
     NOFORMAT='\033[0m'
     RED='\033[0;31m'
@@ -201,18 +201,18 @@ setup_colors() {
     YELLOW='\033[1;33m'
 }
 
-# Simple message output
+# Simple message outpu
 msg() {
     echo "$1"
 }
 
-# Default function to start the development environment
+# Default function to start the development environmen
 # This function is called when no arguments are provided
 default() {
-    ensure_docker_environment
-    # Check if DDEV project exists and start it
+    ensure_docker_environmen
+    # Check if DDEV project exists and start i
     if ddev describe >/dev/null 2>&1; then
-        ensure_ddev_project
+        ensure_ddev_projec
         ddev describe
         ddev sequelace
         ddev launch
@@ -227,47 +227,47 @@ default() {
     fi
 }
 
-# Function to upgrade the script
+# Function to upgrade the scrip
 upgrade() {
     local script_path="${BASH_SOURCE[0]}"
     info "Checking for updates..."
-    
+
     # Temporary files for downloads
     local temp_script="/tmp/dev_new_version"
     local temp_hash="/tmp/dev_new_version.sha256"
-    
-    # Check current version against latest version first
+
+    # Check current version against latest version firs
     local latest_version
     if ! latest_version=$(curl -s -m 5 "https://raw.githubusercontent.com/akaw/dev-cli-tools/main/src/dev" | grep -m 1 "^VERSION=" | cut -d'"' -f2); then
         error "Could not check for updates. Please check your internet connection."
         return 1
     fi
-    
+
     if [[ "$latest_version" == "$VERSION" ]]; then
         info "You already have the latest version ($VERSION)."
         return 0
     fi
-    
+
     info "New version found: $latest_version (current: $VERSION)"
     info "Downloading update..."
-    
+
     # Download new version and hash file
     if ! curl -s -o "$temp_script" "https://raw.githubusercontent.com/akaw/dev-cli-tools/main/src/dev"; then
         error "Download of new version failed."
         return 1
     fi
-    
+
     if ! curl -s -o "$temp_hash" "https://raw.githubusercontent.com/akaw/dev-cli-tools/main/src/dev.sha256"; then
         error "Download of hash file failed."
         rm -f "$temp_script"
         return 1
     fi
-    
+
     # Verify hash
     local expected_hash
     expected_hash=$(cat "$temp_hash")
     local actual_hash
-    
+
     if command -v shasum >/dev/null 2>&1; then
         # macOS typically uses shasum
         actual_hash=$(shasum -a 256 "$temp_script" | awk '{print $1}')
@@ -279,7 +279,7 @@ upgrade() {
         rm -f "$temp_script" "$temp_hash"
         return 1
     fi
-    
+
     if [[ "$actual_hash" != "$expected_hash" ]]; then
         error "Hash verification failed! The update might be compromised."
         error "Expected: $expected_hash"
@@ -287,18 +287,18 @@ upgrade() {
         rm -f "$temp_script" "$temp_hash"
         return 1
     fi
-    
+
     # Create backup
     cp "$script_path" "${script_path}.backup"
-    
+
     # Remove update marker to force version check on next run
     rm -f "/tmp/dev_update_check_$(date +%Y%m%d)" 2>/dev/null
-    
+
     if mv "$temp_script" "$script_path"; then
         chmod +x "$script_path"
         rm -f "$temp_hash"
         info "Update successful!"
-        # Get the new version directly from the script
+        # Get the new version directly from the scrip
         VERSION=$(grep -m 1 "^VERSION=" "$script_path" | cut -d'"' -f2)
         info "New version: ${VERSION}"
         info "Please restart your shell or run 'hash -r' to clear command cache."
@@ -321,7 +321,7 @@ check_file_exists() {
     fi
 }
 
-# Check service status based on environment
+# Check service status based on environmen
 check_service_status() {
     local env=$1
     debug "Checking service status for environment: $env"
@@ -412,7 +412,7 @@ check_service_running() {
     esac
 }
 
-# Start a service based on OS and environment
+# Start a service based on OS and environmen
 start_service() {
     local env=$1
     local service=$2
@@ -428,7 +428,7 @@ start_service() {
         debug "Starting $service on Linux"
         if [[ "$env" == "orbstack" ]]; then
             debug "Using orbstack start command"
-            orbstack start
+            orbstack star
         else
             debug "Using systemctl for Docker"
             sudo systemctl start "$service"
@@ -469,7 +469,7 @@ ensure_docker_environment() {
     temp_marker="/tmp/dev_docker_verified_$(date +%Y%m%d)"
     local marker_status=""
 
-    # Always check Docker first if ALWAYS_CHECK_DOCKER is set
+    # Always check Docker first if ALWAYS_CHECK_DOCKER is se
     if [[ "${ALWAYS_CHECK_DOCKER:-}" == "true" ]]; then
         debug "ALWAYS_CHECK_DOCKER is set, forcing Docker check"
     # Otherwise check for marker
@@ -671,7 +671,7 @@ EOL
         ;;
     esac
 
-    # Create gitignore if it doesn't exist
+    # Create gitignore if it doesn't exis
     if [[ ! -f ".gitignore" ]]; then
         cat >.gitignore <<EOL
 /.project/backups/
@@ -688,7 +688,7 @@ EOL
     return 0
 }
 
-# Setup build tools for project
+# Setup build tools for projec
 setup_build_tools() {
     local project_type=$1
 
@@ -711,7 +711,7 @@ setup_build_tools() {
     # Create common build scripts
     mkdir -p .project/scripts
 
-    # Create build script
+    # Create build scrip
     cat >.project/scripts/build.sh <<EOL
 #!/bin/bash
 set -e
@@ -764,7 +764,7 @@ load_config() {
 save_config() {
     debug "Saving configuration to $CONFIG_FILE"
 
-    # Create directory if it doesn't exist
+    # Create directory if it doesn't exis
     mkdir -p "$(dirname "$CONFIG_FILE")"
 
     # Clear existing file
@@ -791,7 +791,7 @@ setup_config() {
     info "This will configure your preferences for DEV CLI Tools"
     echo ""
 
-    # Docker environment
+    # Docker environmen
     echo "Select your preferred Docker environment:"
     echo "1) OrbStack (recommended for macOS)"
     echo "2) Docker Desktop"
@@ -957,7 +957,7 @@ parse_params() {
         debug "Opening in browser..."
         launch=1
         launchparam="${1-}"
-        [[ -n "$launchparam" ]] && shift
+        [[ -n "$launchparam" ]] && shif
         ;;
 
     s | ssh)
@@ -970,14 +970,14 @@ parse_params() {
         debug "Exporting database..."
         exportdb=1
         exportdbparam="${1-.project/db.sql.gz}"
-        [[ -n "$exportdbparam" ]] && shift
+        [[ -n "$exportdbparam" ]] && shif
         ;;
 
     i | import)
         debug "Importing database..."
         importdb=1
         importdbparam="${1-.project/db.sql.gz}"
-        [[ -n "$importdbparam" ]] && shift
+        [[ -n "$importdbparam" ]] && shif
         ;;
 
     se | seq | sequelace)
@@ -989,7 +989,7 @@ parse_params() {
         debug "Running database migrations..."
         console=1
         consoleparam="database:migrate ${1-}"
-        [[ -n "${1-}" ]] && shift
+        [[ -n "${1-}" ]] && shif
         ;;
 
     damiall | da:mi:all | database:migrate:all)
@@ -1003,14 +1003,14 @@ parse_params() {
         debug "Toggling xdebug..."
         xdebug=1
         xdebugparam="${1-on}"
-        [[ -n "${1-}" ]] && shift
+        [[ -n "${1-}" ]] && shif
         ;;
 
     t | test)
         debug "Running tests..."
         test=1
         testparam="${1-}"
-        [[ -n "$testparam" ]] && shift
+        [[ -n "$testparam" ]] && shif
         ;;
 
     l | logs)
@@ -1034,7 +1034,7 @@ parse_params() {
         debug "Running composer command..."
         composer=1
         composerparam="${1-}"
-        [[ -n "$composerparam" ]] && shift
+        [[ -n "$composerparam" ]] && shif
         ;;
 
     cup | update)
@@ -1053,14 +1053,14 @@ parse_params() {
         debug "Adding package..."
         require=1
         requireparam="${1-}"
-        [[ -n "$requireparam" ]] && shift
+        [[ -n "$requireparam" ]] && shif
         ;;
 
     crm | remove)
         debug "Removing package..."
         remove=1
         removeparam="${1-}"
-        [[ -n "$removeparam" ]] && shift
+        [[ -n "$removeparam" ]] && shif
         ;;
 
     ca | cda | dump-autoload)
@@ -1073,17 +1073,17 @@ parse_params() {
         debug "Setting prefer-source..."
         prefersource=1
         prefersourceparam="${1-}"
-        [[ -n "$prefersourceparam" ]] && shift
+        [[ -n "$prefersourceparam" ]] && shif
         ;;
-    
+
     # bin/Console commands
     c | console)
         debug "Running console command..."
         console=1
         consoleparam="${1-}"
-        [[ -n "$consoleparam" ]] && shift
+        [[ -n "$consoleparam" ]] && shif
         ;;
-    
+
     cd | cade | ca:de | cache:delete)
         debug "Deleting cache..."
         deletecache=1
@@ -1094,13 +1094,13 @@ parse_params() {
         console=1
         consoleparam="cache:clear"
         ;;
-    
+
     # Shopware commands
     b | build)
         debug "Building components..."
         build=1
         buildparam="${1-}"
-        [[ -n "$buildparam" ]] && shift
+        [[ -n "$buildparam" ]] && shif
         ;;
 
     ba | build:administration)
@@ -1125,7 +1125,7 @@ parse_params() {
         debug "Watching components..."
         watch=1
         watchparam="${1-}"
-        [[ -n "$watchparam" ]] && shift
+        [[ -n "$watchparam" ]] && shif
         ;;
 
     wa | wa:ad | watch:administration)
@@ -1163,35 +1163,35 @@ parse_params() {
         debug "Activating plugin..."
         console=1
         consoleparam="plugin:activate ${1-}"
-        [[ -n "${1-}" ]] && shift
+        [[ -n "${1-}" ]] && shif
         ;;
 
     plin | pl:in | plugin:install)
         debug "Installing plugin..."
         console=1
         consoleparam="plugin:install ${1-}"
-        [[ -n "${1-}" ]] && shift
+        [[ -n "${1-}" ]] && shif
         ;;
 
     plun | pl:un | plugin:uninstall)
         debug "Uninstalling plugin..."
         console=1
         consoleparam="plugin:uninstall ${1-}"
-        [[ -n "${1-}" ]] && shift
+        [[ -n "${1-}" ]] && shif
         ;;
 
     pu | plup | pl:up | plugin:update)
         debug "Updating plugin..."
         console=1
         consoleparam="plugin:update ${1-}"
-        [[ -n "${1-}" ]] && shift
+        [[ -n "${1-}" ]] && shif
         ;;
 
     plde | pl:de | plugin:deactivate)
         debug "Deactivating plugin..."
         console=1
         consoleparam="plugin:deactivate ${1-}"
-        [[ -n "${1-}" ]] && shift
+        [[ -n "${1-}" ]] && shif
         ;;
 
     # Project commands
@@ -1202,7 +1202,7 @@ parse_params() {
         if [[ -z "$newparam" ]]; then
             read -r -p "Project type (symfony|shopware): " newparam
         else
-            shift
+            shif
         fi
 
         # Normalize project type
@@ -1233,7 +1233,7 @@ parse_params() {
         debug "Restoring from backup..."
         restore=1
         restoreparam="${1-}"
-        [[ -n "$restoreparam" ]] && shift
+        [[ -n "$restoreparam" ]] && shif
         ;;
 
     upgrade)
@@ -1327,7 +1327,7 @@ init_command_flags() {
 
 # Main execution
 main() {
-    # Setup colors first
+    # Setup colors firs
     setup_colors
 
     # Handle global options
@@ -1335,15 +1335,15 @@ main() {
         case "${1-}" in
         --no-color)
             NO_COLOR=1
-            shift
+            shif
             ;;
         --no-deprecations)
             no_deprecations=1
-            shift
+            shif
             ;;
         -vv | --verbose)
             verbose=1
-            shift
+            shif
             ;;
         -v | --version)
             version
@@ -1377,7 +1377,7 @@ main() {
         esac
     fi
 
-    # Enable debug logging if set
+    # Enable debug logging if se
     if [[ "${LOG_LEVEL:-}" == "DEBUG" ]]; then
         debug "Debug mode enabled"
         debug "Operating system: $OS"
@@ -1389,7 +1389,7 @@ main() {
 
     # No arguments provided
     if [ $# -eq 0 ]; then
-        default
+        defaul
         exit 0
     fi
 
@@ -1405,7 +1405,7 @@ execute_commands() {
     # Execute console commands
     if [[ $console == 1 ]]; then
         # Only verify Docker when actually needed
-        ensure_docker_environment
+        ensure_docker_environmen
 
         # Use the new helper function
         if ! check_and_ensure_running_container; then
@@ -1452,7 +1452,7 @@ execute_commands() {
 
     # Run composer commands
     if [[ $composer == 1 ]]; then
-        ensure_docker_environment
+        ensure_docker_environmen
 
         # Use the new helper function
         if ! check_and_ensure_running_container; then
@@ -1465,7 +1465,7 @@ execute_commands() {
 
     # Handle package requirements
     if [[ $require == 1 ]]; then
-        ensure_docker_environment
+        ensure_docker_environmen
 
         # Use our optimized container check function
         if ! check_and_ensure_running_container; then
@@ -1482,7 +1482,7 @@ execute_commands() {
 
     # Handle package removal
     if [[ $remove == 1 ]]; then
-        ensure_docker_environment
+        ensure_docker_environmen
 
         # Use our optimized container check function
         if ! check_and_ensure_running_container; then
@@ -1495,7 +1495,7 @@ execute_commands() {
 
     # Build shopware components
     if [[ $build == 1 ]]; then
-        ensure_docker_environment
+        ensure_docker_environmen
 
         # Use our optimized container check function
         if ! check_and_ensure_running_container; then
@@ -1521,7 +1521,7 @@ execute_commands() {
 
     # Watch components
     if [[ $watch == 1 ]]; then
-        ensure_docker_environment
+        ensure_docker_environmen
 
         # Use our optimized container check function
         if ! check_and_ensure_running_container; then
@@ -1544,7 +1544,7 @@ execute_commands() {
 
     # Database operations
     if [[ $exportdb == 1 ]]; then
-        ensure_docker_environment
+        ensure_docker_environmen
 
         # Use our optimized container check function
         if ! check_and_ensure_running_container; then
@@ -1556,7 +1556,7 @@ execute_commands() {
     fi
 
     if [[ $importdb == 1 ]]; then
-        ensure_docker_environment
+        ensure_docker_environmen
 
         # Use our optimized container check function
         if ! check_and_ensure_running_container; then
@@ -1570,34 +1570,34 @@ execute_commands() {
 
     # Project operations
     if [[ $start == 1 ]]; then
-        ensure_docker_environment
+        ensure_docker_environmen
         debug "Starting project..."
-        ddev start
+        ddev star
         ddev describe
     fi
 
     if [[ $down == 1 ]]; then
-        ensure_docker_environment
+        ensure_docker_environmen
         debug "Stopping project..."
         ddev stop
     fi
 
     if [[ $restart == 1 ]]; then
-        ensure_docker_environment
+        ensure_docker_environmen
         debug "Restarting project..."
-        ddev restart
+        ddev restar
         ddev describe
     fi
 
     if [[ $status == 1 ]]; then
-        ensure_docker_environment
+        ensure_docker_environmen
         debug "Showing project status..."
         ddev describe
     fi
 
     # Direct command execution
     if [[ $ssh == 1 ]]; then
-        ensure_docker_environment
+        ensure_docker_environmen
 
         # Use our optimized container check function
         if ! check_and_ensure_running_container; then
@@ -1609,7 +1609,7 @@ execute_commands() {
     fi
 
     if [[ $sequelace == 1 ]]; then
-        ensure_docker_environment
+        ensure_docker_environmen
 
         # Use our optimized container check function
         if ! check_and_ensure_running_container; then
@@ -1621,7 +1621,7 @@ execute_commands() {
     fi
 
     if [[ $launch == 1 ]]; then
-        ensure_docker_environment
+        ensure_docker_environmen
 
         # Use our optimized container check function
         if ! check_and_ensure_running_container; then
@@ -1639,7 +1639,7 @@ execute_commands() {
 
     # Cache operations
     if [[ $deletecache == 1 ]]; then
-        ensure_docker_environment
+        ensure_docker_environmen
 
         # Use our optimized container check function
         if ! check_and_ensure_running_container; then
@@ -1653,7 +1653,7 @@ execute_commands() {
 
     # Testing
     if [[ $test == 1 ]]; then
-        ensure_docker_environment
+        ensure_docker_environmen
 
         # Use our optimized container check function
         if ! check_and_ensure_running_container; then
@@ -1664,9 +1664,9 @@ execute_commands() {
         ddev exec php bin/phpunit "${testparam-}"
     fi
 
-    # Initialize project
+    # Initialize projec
     if [[ $init == 1 ]]; then
-        ensure_docker_environment
+        ensure_docker_environmen
         debug "Initializing project..."
         read -r -p "Initialize DEV Environment? This will overwrite db and .env.local (y/n)?" choice
         case "$choice" in
@@ -1675,7 +1675,7 @@ execute_commands() {
             check_file_exists ".project/init.sql.gz"
             check_file_exists ".project/env.ddev"
             ddev exec cp .env.ddev .env.local
-            ddev start
+            ddev star
             ddev import-db -f .project/init.sql.gz
             ddev describe
             ;;
@@ -1687,7 +1687,7 @@ execute_commands() {
 
     # Backup and restore
     if [[ $backup == 1 ]]; then
-        ensure_docker_environment
+        ensure_docker_environmen
 
         # Use our optimized container check function
         if ! check_and_ensure_running_container; then
@@ -1703,7 +1703,7 @@ execute_commands() {
     fi
 
     if [[ $restore == 1 ]]; then
-        ensure_docker_environment
+        ensure_docker_environmen
 
         # Use our optimized container check function
         if ! check_and_ensure_running_container; then
@@ -1718,7 +1718,7 @@ execute_commands() {
 
     # Mail server
     if [[ $mail == 1 ]]; then
-        ensure_docker_environment
+        ensure_docker_environmen
 
         # Use our optimized container check function
         if ! check_and_ensure_running_container; then
@@ -1731,7 +1731,7 @@ execute_commands() {
 
     # Package handling
     if [[ $packages == 1 ]]; then
-        ensure_docker_environment
+        ensure_docker_environmen
 
         # Use our optimized container check function
         if ! check_and_ensure_running_container; then
@@ -1744,14 +1744,14 @@ execute_commands() {
 
     # New project creation
     if [[ $new == 1 ]]; then
-        ensure_docker_environment
+        ensure_docker_environmen
         debug "Creating new project of type: $newparam"
         # Rest of new project creation code
     fi
 
     # Remove unnecessary variables
-    unset RED GREEN sequelace logs down xdebug ssh start deletecache restart status \
-        update install require requireparam prune upgrade poweroff version lint \
+    unset RED GREEN sequelace logs down xdebug ssh start deletecache restart status
+        update install require requireparam prune upgrade poweroff version lin
         launch launchparam remove removeparam mail NO_COLOR args
 
     return 0
@@ -1764,7 +1764,7 @@ process_packages() {
     local vendor_dir="$base_dir/vendor"
     local plugins_dir="$base_dir/custom/plugins"
 
-    # Create plugins directory if it doesn't exist
+    # Create plugins directory if it doesn't exis
     mkdir -p "$plugins_dir"
 
     # Process store packages
@@ -1834,9 +1834,9 @@ check_and_ensure_running_container() {
     local project_name
     project_name=$(grep "name:" .ddev/config.yaml | head -n1 | awk '{print $2}')
     debug "Found DDEV project: $project_name"
-    
+
     debug "Checking container status for project: $project_name"
-    
+
     # APPROACH 1: Try direct docker container check first (most reliable)
     debug "Checking for running Docker container..."
     local container_running=false
@@ -1846,29 +1846,29 @@ check_and_ensure_running_container() {
     else
         debug "Docker container check: No running container for project found"
     fi
-    
+
     # APPROACH 2: Try ddev status JSON output as backup
     if [[ "$container_running" != "true" ]]; then
         debug "Trying DDEV JSON status check as alternative..."
-        
+
         # Check if we can get JSON output from ddev
-        local json_output
+        local json_outpu
         if json_output=$(ddev describe --json-output 2>/dev/null); then
             debug "Successfully got JSON output from DDEV"
-            
+
             # If jq is available, use it for proper parsing
             if command -v jq >/dev/null 2>&1; then
                 local json_status
                 json_status=$(echo "$json_output" | jq -r '.[0].status' 2>/dev/null)
                 debug "JSON status: '$json_status'"
-                
+
                 if [[ "$json_status" == "running" || "$json_status" == "Running" ]]; then
                     debug "JSON check confirms container is running (status: $json_status)"
                     container_running=true
                 fi
             else
                 # Fallback for systems without jq - crude grep for running status
-                if echo "$json_output" | grep -q '"status":"running"' || 
+                if echo "$json_output" | grep -q '"status":"running"' ||
                    echo "$json_output" | grep -q '"status":"Running"'; then
                     debug "Simple JSON grep confirms container is running"
                     container_running=true
@@ -1878,7 +1878,7 @@ check_and_ensure_running_container() {
             debug "Failed to get JSON output from DDEV"
         fi
     fi
-    
+
     # Final decision based on our checks
     if [[ "$container_running" == "true" ]]; then
         debug "FINAL DETERMINATION: Container IS running - no restart needed"

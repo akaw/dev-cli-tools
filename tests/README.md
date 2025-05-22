@@ -32,9 +32,9 @@ To run these tests locally, you need:
    ```bash
    # Installation on macOS
    brew install bats-core
-   
+
    # Installation on Linux
-   git clone https://github.com/bats-core/bats-core.git
+   git clone https://github.com/bats-core/bats-core.gi
    cd bats-core
    ./install.sh /usr/local
    ```
@@ -79,4 +79,4 @@ To create a new mock:
 
 1. Add a script to `mocks/`
 2. Make it executable: `chmod +x mocks/command-name`
-3. Implement appropriate responses for test cases 
+3. Implement appropriate responses for test cases

@@ -63,7 +63,7 @@ All notable changes to the Development CLI Tools will be documented in this file
 
 ### Added
 - Implemented a robust multi-layered container status detection system
-- Added support for JSON-based status checks with ddev describe --json-output
+- Added support for JSON-based status checks with ddev describe --json-outpu
 - Incorporated fallback mechanisms for more reliable status detection
 
 ### Fixed
@@ -142,7 +142,7 @@ All notable changes to the Development CLI Tools will be documented in this file
 
 ### Added
 - Added configuration for project auto-start behavior
-- Added `--no-autostart` flag to disable automatic project start
+- Added `--no-autostart` flag to disable automatic project star
 - Added setup wizard option to configure auto-start preference
 
 ### Changed
@@ -197,7 +197,7 @@ All notable changes to the Development CLI Tools will be documented in this file
 - Added `-vv` / `--verbose` flag for verbose output in console commands
 
 ### Changed
-- Improved console command execution with flexible flag support
+- Improved console command execution with flexible flag suppor
 - Updated documentation with new command-line options
 
 ## [1.1.8] - 2025-05-16
@@ -232,7 +232,7 @@ All notable changes to the Development CLI Tools will be documented in this file
 - Added messenger consume command (mc, messenger:consume)
 
 ### Changed
-- Improved command parsing with enhanced debug output
+- Improved command parsing with enhanced debug outpu
 - Enhanced error handling in execute_commands
 - Simplified package management process
 - Updated usage information to show command variants
@@ -249,7 +249,7 @@ All notable changes to the Development CLI Tools will be documented in this file
 - Added support for Symfony 6.4 projects
 - Added standardized project structure creation
 - Added automatic build tool setup for both Symfony and Shopware
-- Added automatic update check on script start
+- Added automatic update check on script star
 - Added `check-update` command for manual update checks
 
 ### Changed
@@ -270,7 +270,7 @@ All notable changes to the Development CLI Tools will be documented in this file
 
 ### Changed
 - Removed `config.env` file in favor of environment variables
-- Simplified configuration management
+- Simplified configuration managemen
 - Enhanced environment variable handling
 - Improved code maintainability
 
@@ -286,9 +286,9 @@ All notable changes to the Development CLI Tools will be documented in this file
 
 ### Changed
 - Improved project structure: Moved main script to `src/` directory
-- Integrated configuration directly into main script
+- Integrated configuration directly into main scrip
 - Removed separate configuration files (config.env and VERSION)
-- Simplified installation with self-contained script
+- Simplified installation with self-contained scrip
 - Enhanced documentation with flexible installation options
 
 ## [1.1.1] - 2025-05-14
@@ -336,7 +336,7 @@ All notable changes to the Development CLI Tools will be documented in this file
 - Development tools (xdebug, logs)
 - Configuration system
 - Logging system
-- Color output support
+- Color output suppor
 
 ### Technical Details
 
@@ -345,25 +345,25 @@ All notable changes to the Development CLI Tools will be documented in this file
 - Configuration via config.env
 - Logging with different levels
 - Support for macOS and Linux
-- OrbStack and Docker Desktop support
+- OrbStack and Docker Desktop suppor
 
 ### Development Process
 
-1. Initial Proof of Concept
+1. Initial Proof of Concep
    - Basic shell script for common DDEV commands
    - Minimal functionality testing
    - Core command structure
 
-2. AI-Assisted Development
-   - Iterative improvements using GitHub Copilot
+2. AI-Assisted Developmen
+   - Iterative improvements using GitHub Copilo
    - Code structure optimization
-   - Command pattern refinement
-   - Error handling enhancement
+   - Command pattern refinemen
+   - Error handling enhancemen
 
 3. Feature Expansion
    - Integration of additional tools
    - Enhanced logging system
-   - Configuration management
+   - Configuration managemen
    - Documentation improvements
 
 4. Refinement Iterations

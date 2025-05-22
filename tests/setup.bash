@@ -3,7 +3,7 @@
 # Get the directory where this setup script is located
 TEST_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-# Path to the main dev script
+# Path to the main dev scrip
 export DEV_SCRIPT="${TEST_DIR}/../src/dev"
 
 # Ensure the script is executable
@@ -36,4 +36,4 @@ export DEV_TEST_MODE="true"
 # Helper to run the dev script with specific parameters
 run_dev() {
     "${DEV_SCRIPT}" "$@"
-} 
+}
