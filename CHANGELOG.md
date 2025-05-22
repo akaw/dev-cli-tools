@@ -2,6 +2,17 @@
 
 All notable changes to the Development CLI Tools will be documented in this file.
 
+## [1.2.3] - 2024-05-22
+
+### Added
+- Added configuration for project auto-start behavior
+- Added `--no-autostart` flag to disable automatic project start
+- Added setup wizard option to configure auto-start preference
+
+### Changed
+- Project auto-start is now configurable and can be disabled
+- Updated help documentation with new options
+
 ## [1.2.2] - 2024-05-21
 
 ### Fixed

@@ -6,13 +6,13 @@
 #
 # Description: dDEV shortening tools
 # Usage: dev [OPTIONS] [PARAMETERS]
-# Version: 1.2.2
+# Version: 1.2.3
 # https://github.com/akaw/dev-cli-tools/
 #
 # shellcheck disable=SC2034,SC2168,SC2317
 
 # Default Configuration
-VERSION="1.2.2"
+VERSION="1.2.3"
 DOCKER_ENVIRONMENT="${DOCKER_ENVIRONMENT:-orbstack}"
 BACKUP_DIR="${BACKUP_DIR:-.project/backups}"
 DB_EXPORT_FILE="${DB_EXPORT_FILE:-.project/db.sql.gz}"
