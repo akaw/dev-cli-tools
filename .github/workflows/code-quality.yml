@@ -54,8 +54,17 @@ jobs:
           
       - name: Prüfe Einrückung
         run: |
-          # Prüfe, dass Einrückung mit 4 Spaces erfolgt
-          ! grep -E '^\t' src/dev
+          # Prüfe, dass Einrückung mit 4 Spaces erfolgt statt Tabs
+          echo "Suche nach Tabs in der Datei..."
+          TAB=$(printf '\t')
+          if grep -n "$TAB" src/dev; then
+            echo "Gefundene Tabs (Zeilennummern und Inhalt):"
+            grep -n "$TAB" src/dev
+            echo "Bitte verwende 4 Spaces statt Tabs für die Einrückung."
+            exit 1
+          else
+            echo "Keine Tabs gefunden - Test bestanden!"
+          fi
           
       - name: Prüfe Trailing Whitespace
         run: |
