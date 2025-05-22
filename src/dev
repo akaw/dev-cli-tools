@@ -6,13 +6,13 @@
 #
 # Description: dDEV shortening tools
 # Usage: dev [OPTIONS] [PARAMETERS]
-# Version: 1.2.3
+# Version: 1.3.1
 # https://github.com/akaw/dev-cli-tools/
 #
 # shellcheck disable=SC2034,SC2168,SC2317
 
 # Default Configuration
-VERSION="1.2.6"
+VERSION="1.3.1"
 DOCKER_ENVIRONMENT="${DOCKER_ENVIRONMENT:-orbstack}"
 BACKUP_DIR="${BACKUP_DIR:-.project/backups}"
 DB_EXPORT_FILE="${DB_EXPORT_FILE:-.project/db.sql.gz}"
@@ -1356,27 +1356,14 @@ execute_commands() {
         # Only verify Docker when actually needed
         ensure_docker_environment
         
-        # Check if DDEV project exists before trying to run console commands
-        if ! check_ddev_project; then
+        # Use the new helper function
+        if ! check_and_ensure_running_container; then
             return 1
         fi
         
         # Special handling for cache:clear command to avoid unnecessary restarts
         if [[ $consoleparam == "cache:clear" ]]; then
             debug "Running cache:clear command directly..."
-            debug "Container status was checked by check_ddev_project() before this"
-            
-            # Output current container state again for debugging
-            local project_name
-            project_name=$(grep "name:" .ddev/config.yaml | head -n1 | awk '{print $2}')
-            debug "Project name from config: $project_name"
-            
-            # Check if container is running directly
-            if docker ps | grep -q "ddev-${project_name}-web"; then
-                debug "VERIFIED: Container is already running (docker ps check)"
-            else
-                debug "WARNING: Container appears to not be running despite previous check!"
-            fi
             
             local console_flags=""
             [[ $verbose == 1 ]] && console_flags+=" -v"
@@ -1416,8 +1403,8 @@ execute_commands() {
     if [[ $composer == 1 ]]; then
         ensure_docker_environment
         
-        # Check if DDEV project exists
-        if ! check_ddev_project; then
+        # Use the new helper function
+        if ! check_and_ensure_running_container; then
             return 1
         fi
         
@@ -1429,8 +1416,8 @@ execute_commands() {
     if [[ $require == 1 ]]; then
         ensure_docker_environment
         
-        # Check if DDEV project exists
-        if ! check_ddev_project; then
+        # Use our optimized container check function
+        if ! check_and_ensure_running_container; then
             return 1
         fi
         
@@ -1446,8 +1433,8 @@ execute_commands() {
     if [[ $remove == 1 ]]; then
         ensure_docker_environment
         
-        # Check if DDEV project exists
-        if ! check_ddev_project; then
+        # Use our optimized container check function
+        if ! check_and_ensure_running_container; then
             return 1
         fi
         
@@ -1459,8 +1446,8 @@ execute_commands() {
     if [[ $build == 1 ]]; then
         ensure_docker_environment
         
-        # Check if DDEV project exists
-        if ! check_ddev_project; then
+        # Use our optimized container check function
+        if ! check_and_ensure_running_container; then
             return 1
         fi
         
@@ -1485,8 +1472,8 @@ execute_commands() {
     if [[ $watch == 1 ]]; then
         ensure_docker_environment
         
-        # Check if DDEV project exists
-        if ! check_ddev_project; then
+        # Use our optimized container check function
+        if ! check_and_ensure_running_container; then
             return 1
         fi
         
@@ -1508,8 +1495,8 @@ execute_commands() {
     if [[ $exportdb == 1 ]]; then
         ensure_docker_environment
         
-        # Check if DDEV project exists
-        if ! check_ddev_project; then
+        # Use our optimized container check function
+        if ! check_and_ensure_running_container; then
             return 1
         fi
         
@@ -1520,8 +1507,8 @@ execute_commands() {
     if [[ $importdb == 1 ]]; then
         ensure_docker_environment
         
-        # Check if DDEV project exists
-        if ! check_ddev_project; then
+        # Use our optimized container check function
+        if ! check_and_ensure_running_container; then
             return 1
         fi
         
@@ -1561,8 +1548,8 @@ execute_commands() {
     if [[ $ssh == 1 ]]; then
         ensure_docker_environment
         
-        # Check if DDEV project exists
-        if ! check_ddev_project; then
+        # Use our optimized container check function
+        if ! check_and_ensure_running_container; then
             return 1
         fi
         
@@ -1573,8 +1560,8 @@ execute_commands() {
     if [[ $sequelace == 1 ]]; then
         ensure_docker_environment
         
-        # Check if DDEV project exists
-        if ! check_ddev_project; then
+        # Use our optimized container check function
+        if ! check_and_ensure_running_container; then
             return 1
         fi
         
@@ -1585,8 +1572,8 @@ execute_commands() {
     if [[ $launch == 1 ]]; then
         ensure_docker_environment
         
-        # Check if DDEV project exists
-        if ! check_ddev_project; then
+        # Use our optimized container check function
+        if ! check_and_ensure_running_container; then
             return 1
         fi
         
@@ -1603,8 +1590,8 @@ execute_commands() {
     if [[ $deletecache == 1 ]]; then
         ensure_docker_environment
         
-        # Check if DDEV project exists
-        if ! check_ddev_project; then
+        # Use our optimized container check function
+        if ! check_and_ensure_running_container; then
             return 1
         fi
         
@@ -1617,8 +1604,8 @@ execute_commands() {
     if [[ $test == 1 ]]; then
         ensure_docker_environment
         
-        # Check if DDEV project exists
-        if ! check_ddev_project; then
+        # Use our optimized container check function
+        if ! check_and_ensure_running_container; then
             return 1
         fi
         
@@ -1651,8 +1638,8 @@ execute_commands() {
     if [[ $backup == 1 ]]; then
         ensure_docker_environment
         
-        # Check if DDEV project exists
-        if ! check_ddev_project; then
+        # Use our optimized container check function
+        if ! check_and_ensure_running_container; then
             return 1
         fi
         
@@ -1667,8 +1654,8 @@ execute_commands() {
     if [[ $restore == 1 ]]; then
         ensure_docker_environment
         
-        # Check if DDEV project exists
-        if ! check_ddev_project; then
+        # Use our optimized container check function
+        if ! check_and_ensure_running_container; then
             return 1
         fi
         
@@ -1682,8 +1669,8 @@ execute_commands() {
     if [[ $mail == 1 ]]; then
         ensure_docker_environment
         
-        # Check if DDEV project exists
-        if ! check_ddev_project; then
+        # Use our optimized container check function
+        if ! check_and_ensure_running_container; then
             return 1
         fi
         
@@ -1695,8 +1682,8 @@ execute_commands() {
     if [[ $packages == 1 ]]; then
         ensure_docker_environment
         
-        # Check if DDEV project exists
-        if ! check_ddev_project; then
+        # Use our optimized container check function
+        if ! check_and_ensure_running_container; then
             return 1
         fi
         
@@ -1776,6 +1763,81 @@ create_package_name() {
     echo "$vendor$name"
 }
 
+# Function to check if a container is running and start it if necessary
+check_and_ensure_running_container() {
+    # First check if we're even in a valid project directory
+    if [ ! -d ".ddev" ] || [ ! -f ".ddev/config.yaml" ]; then
+        warn "This command requires a DDEV project, but none was found in the current directory."
+        info "Please change to a directory with a DDEV project or create one with 'ddev config'."
+        info "Alternatively, you can create a new project (Symfony or Shopware) with 'dev new'."
+        return 1
+    fi
+    
+    # Get project name to check container status
+    local project_name
+    project_name=$(grep "name:" .ddev/config.yaml | head -n1 | awk '{print $2}')
+    debug "Found DDEV project: $project_name"
+    
+    echo "DEBUG: Checking container status for project: $project_name"
+    
+    # APPROACH 1: Try direct docker container check first (most reliable)
+    echo "DEBUG: Checking for running Docker container..."
+    local container_running=false
+    if docker ps --format "{{.Names}}" 2>/dev/null | grep -q "ddev-${project_name}-web"; then
+        echo "DEBUG: FOUND RUNNING CONTAINER: Docker reports container 'ddev-${project_name}-web' is running"
+        container_running=true
+    else
+        echo "DEBUG: Docker container check: No running container for project found"
+    fi
+    
+    # APPROACH 2: Try ddev status JSON output as backup
+    if [[ "$container_running" != "true" ]]; then
+        echo "DEBUG: Trying DDEV JSON status check as alternative..."
+        
+        # Check if we can get JSON output from ddev
+        local json_output
+        if json_output=$(ddev describe --json-output 2>/dev/null); then
+            echo "DEBUG: Successfully got JSON output from DDEV"
+            
+            # If jq is available, use it for proper parsing
+            if command -v jq >/dev/null 2>&1; then
+                local json_status
+                json_status=$(echo "$json_output" | jq -r '.[0].status' 2>/dev/null)
+                echo "DEBUG: JSON status: '$json_status'"
+                
+                if [[ "$json_status" == "running" || "$json_status" == "Running" ]]; then
+                    echo "DEBUG: JSON check confirms container is running (status: $json_status)"
+                    container_running=true
+                fi
+            else
+                # Fallback for systems without jq - crude grep for running status
+                if echo "$json_output" | grep -q '"status":"running"' || 
+                   echo "$json_output" | grep -q '"status":"Running"'; then
+                    echo "DEBUG: Simple JSON grep confirms container is running"
+                    container_running=true
+                fi
+            fi
+        else
+            echo "DEBUG: Failed to get JSON output from DDEV"
+        fi
+    fi
+    
+    # Final decision based on our checks
+    if [[ "$container_running" == "true" ]]; then
+        echo "DEBUG: FINAL DETERMINATION: Container IS running - no restart needed"
+        return 0
+    else
+        echo "DEBUG: FINAL DETERMINATION: Container is NOT running - will start it now"
+        echo "DEBUG: Starting the container..."
+        if ! ddev start; then
+            error "Failed to start DDEV project. Please check for errors and try again."
+            return 1
+        fi
+        echo "DEBUG: Container started successfully"
+        return 0
+    fi
+}
+
 # Function to ensure DDEV project is running
 ensure_ddev_project() {
     # Skip project checks in test mode
@@ -1786,84 +1848,18 @@ ensure_ddev_project() {
     
     debug "Ensuring DDEV project is running..."
     
-    # Check if .ddev directory exists in the current directory
-    if [ ! -d ".ddev" ]; then
-        debug "No .ddev directory found in current directory. Not a DDEV project."
-        return 1
-    fi
-    
-    # Check if .ddev/config.yaml exists
-    if [ ! -f ".ddev/config.yaml" ]; then
-        debug "No .ddev/config.yaml found. Not a valid DDEV project."
-        return 1
-    fi
-    
-    # Get project name from config.yaml
-    local project_name
-    project_name=$(grep "name:" .ddev/config.yaml | head -n1 | awk '{print $2}')
-    debug "Checking status for project: $project_name"
-    
-    # Check if container is running
-    docker ps | grep -q "ddev-${project_name}-web"
-    local running=$?
-    
-    debug "Container running status code: $running (0=running, 1=not running)"
-    
-    if [ $running -eq 0 ]; then
-        debug "DDEV project $project_name is already running"
-        return 0
-    else
-        debug "DDEV project $project_name is not running, starting it..."
-        ddev start
-        local start_result=$?
-        debug "DDEV start result: $start_result (0=success, non-zero=failure)"
-        
-        if [ $start_result -ne 0 ]; then
-            error "Failed to start DDEV project. Please check for errors and try again."
-            return 1
-        fi
-        
-        debug "DDEV project started successfully"
-        return 0
-    fi
+    # Use the new helper function - call directly and return its status
+    check_and_ensure_running_container
+    return $?
 }
 
 # Eine Hilfsfunktion für die Fehlermeldung, um Code-Duplizierung zu vermeiden
 check_ddev_project() {
     debug "Calling check_ddev_project..."
     
-    # First check if we're even in a valid project directory
-    if [ ! -d ".ddev" ] || [ ! -f ".ddev/config.yaml" ]; then
-        warn "This command requires a DDEV project, but none was found in the current directory."
-        info "Please change to a directory with a DDEV project or create one with 'ddev config'."
-        info "Alternatively, you can create a new project (Symfony or Shopware) with 'dev new'."
-        return 1
-    fi
-    
-    # Get project name for debug output
-    local project_name
-    project_name=$(grep "name:" .ddev/config.yaml | head -n1 | awk '{print $2}')
-    debug "Project directory check: Valid DDEV project found with name: $project_name"
-    
-    # Now check container state with docker directly (bypass ensure_ddev_project)
-    if docker ps | grep -q "ddev-${project_name}-web"; then
-        debug "Container check: DDEV project $project_name is already running (docker check)"
-        
-        # If we're here, the container is running so return success
-        # This skips ensure_ddev_project completely but marks the project as valid and running
-        return 0
-    fi
-    
-    # If we're here, container isn't running, so call ensure_ddev_project to start it
-    debug "Container check: DDEV project $project_name is not running, calling ensure_ddev_project to start it..."
-    if ! ensure_ddev_project; then
-        warn "This command requires a DDEV project, but none was found in the current directory."
-        info "Please change to a directory with a DDEV project or create one with 'ddev config'."
-        info "Alternatively, you can create a new project (Symfony or Shopware) with 'dev new'."
-        return 1
-    fi
-    
-    return 0
+    # Use the new helper function - call directly and return its status
+    check_and_ensure_running_container
+    return $?
 }
 
 # Start execution

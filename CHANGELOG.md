@@ -2,6 +2,61 @@
 
 All notable changes to the Development CLI Tools will be documented in this file.
 
+## [1.3.1] - 2024-05-24
+
+### Fixed
+- Fixed build commands (bs/build:storefront, ba/build:administration, etc.) still causing unnecessary container restarts
+- Updated all command handlers to use the new optimized container check function
+- Consistently implemented container detection across all tool commands
+
+### Changed
+- Refactored duplicate container check code in all command handlers
+- Improved debug output for container status detection
+- Consolidated container verification logic to use a single approach throughout the codebase
+
+## [1.3.0] - 2024-05-23
+
+### Added
+- Implemented a robust multi-layered container status detection system
+- Added support for JSON-based status checks with ddev describe --json-output
+- Incorporated fallback mechanisms for more reliable status detection
+
+### Fixed
+- Resolved persistent container detection issues with a more reliable approach
+- Fixed empty status issue with ddev describe command
+- Improved reliability of container status detection across different environments
+
+## [1.2.9] - 2024-05-23
+
+### Fixed
+- Fixed critical issue with DDEV status detection parsing
+- Replaced `ddev list` with `ddev describe` for more reliable project status checking
+- Added support for all variants of "running" status in DDEV (OK, Running, running)
+
+## [1.2.8] - 2024-05-23
+
+### Fixed
+- Fixed critical issue with container detection that was still causing unnecessary restarts
+- Replaced `docker ps` with `ddev list` for more reliable container status checking
+- Corrected function return value handling for helper functions
+
+### Changed
+- Added enhanced debugging output to troubleshoot container status
+- Improved error messaging for container startup issues
+
+## [1.2.7] - 2024-05-23
+
+### Fixed
+- Improved container restart prevention logic for all DDEV commands, not just cache:clear
+- Refactored container state checking to use direct Docker container checks
+- Consolidated all project checks to follow the same pattern
+
+### Changed
+- Created centralized `check_and_ensure_running_container` function to handle all container checks consistently
+- Enhanced debugging output to focus on container runtime state
+- Updated error messages to be more specific about container status
+- Removed redundant check_ddev_project() function calls in favor of direct Docker container inspection
+
 ## [1.2.6] - 2024-05-22
 
 ### Fixed
