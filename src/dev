@@ -12,7 +12,7 @@
 # shellcheck disable=SC2034,SC2168,SC2317
 
 # Default Configuration
-VERSION="1.2.3"
+VERSION="1.2.4"
 DOCKER_ENVIRONMENT="${DOCKER_ENVIRONMENT:-orbstack}"
 BACKUP_DIR="${BACKUP_DIR:-.project/backups}"
 DB_EXPORT_FILE="${DB_EXPORT_FILE:-.project/db.sql.gz}"
@@ -22,7 +22,6 @@ DEFAULT_MYSQL_VERSION="${DEFAULT_MYSQL_VERSION:-8.0}"
 LOG_FILE="${LOG_FILE:-dev.log}"
 PREFERRED_EDITOR="${PREFERRED_EDITOR:-}"  # Empty default means no editor will be launched
 CONFIG_FILE="${CONFIG_FILE:-$HOME/.dev-cli-tools.conf}"
-AUTO_START_PROJECT="${AUTO_START_PROJECT:-true}"  # Control project auto-start, defaults to true
 
 OS=$(uname -s)
 
@@ -99,7 +98,6 @@ OPTIONS:
     -v,  --version       Show version
          --no-color      Disable colored output
          --no-deprecations  Suppress deprecation warnings
-         --no-autostart  Do not automatically start DDEV project
     -vv, --verbose       Verbose output
 
 CONFIGURATION:
@@ -722,7 +720,6 @@ save_config() {
     [[ -n "$DEFAULT_NODE_VERSION" ]] && echo "export DEFAULT_NODE_VERSION=\"$DEFAULT_NODE_VERSION\"" >> "$CONFIG_FILE"
     [[ -n "$DEFAULT_MYSQL_VERSION" ]] && echo "export DEFAULT_MYSQL_VERSION=\"$DEFAULT_MYSQL_VERSION\"" >> "$CONFIG_FILE"
     [[ -n "$LOG_LEVEL" ]] && echo "export LOG_LEVEL=\"$LOG_LEVEL\"" >> "$CONFIG_FILE"
-    [[ -n "$AUTO_START_PROJECT" ]] && echo "export AUTO_START_PROJECT=\"$AUTO_START_PROJECT\"" >> "$CONFIG_FILE"
     
     info "Configuration saved to $CONFIG_FILE"
 }
@@ -779,22 +776,6 @@ setup_config() {
     else
         echo "No default editor set"
     fi
-    echo ""
-    
-    # Auto-start project setting
-    echo "Do you want projects to auto-start when needed?"
-    echo "1) Yes, automatically start projects (recommended)"
-    echo "2) No, I'll start projects manually"
-    echo ""
-    read -r -p "Enter your choice [1-2, default: 1]: " autostart_choice
-    
-    case "${autostart_choice:-1}" in
-        1) AUTO_START_PROJECT="true" ;;
-        2) AUTO_START_PROJECT="false" ;;
-        *) AUTO_START_PROJECT="true" ;;
-    esac
-    
-    echo "Auto-start project setting: $AUTO_START_PROJECT"
     echo ""
     
     # Default PHP version
@@ -1197,7 +1178,6 @@ init_command_flags() {
     console=0
     consoleparam=""
     no_deprecations=0
-    no_autostart=0
     verbose=0
 
     # Build commands
@@ -1249,10 +1229,6 @@ main() {
             ;;
         --no-deprecations)
             no_deprecations=1
-            shift
-            ;;
-        --no-autostart)
-            no_autostart=1
             shift
             ;;
         -vv | --verbose)
@@ -1317,7 +1293,27 @@ execute_commands() {
     if [[ $console == 1 ]]; then
         # Only verify Docker when actually needed
         ensure_docker_environment
-        ensure_ddev_project
+        
+        # Check if DDEV project exists before trying to run console commands
+        if ! check_ddev_project; then
+            return 1
+        fi
+        
+        # Special handling for cache:clear command to avoid unnecessary restarts
+        if [[ $consoleparam == "cache:clear" ]]; then
+            debug "Running cache:clear command directly..."
+            local console_flags=""
+            [[ $verbose == 1 ]] && console_flags+=" -v"
+            
+            # Add deprecation handling for Shopware console commands via environment variable
+            if [[ -f "bin/console" && -d "vendor/shopware" ]]; then
+                debug "Automatically suppressing deprecation warnings for Shopware via SYMFONY_DEPRECATIONS_HELPER"
+                ddev exec SYMFONY_DEPRECATIONS_HELPER=weak bin/console cache:clear $console_flags
+            else
+                ddev exec bin/console cache:clear $console_flags
+            fi
+            return 0
+        fi
         
         debug "Executing console command: $consoleparam"
         local console_flags=""
@@ -1343,7 +1339,12 @@ execute_commands() {
     # Run composer commands
     if [[ $composer == 1 ]]; then
         ensure_docker_environment
-        ensure_ddev_project
+        
+        # Check if DDEV project exists
+        if ! check_ddev_project; then
+            return 1
+        fi
+        
         debug "Running composer command: $composerparam"
         ddev composer "$composerparam"
     fi
@@ -1351,7 +1352,12 @@ execute_commands() {
     # Handle package requirements
     if [[ $require == 1 ]]; then
         ensure_docker_environment
-        ensure_ddev_project
+        
+        # Check if DDEV project exists
+        if ! check_ddev_project; then
+            return 1
+        fi
+        
         debug "Adding package: $requireparam"
         if [[ $prefersource == 1 ]]; then
             ddev composer require "$requireparam" --prefer-source
@@ -1363,7 +1369,12 @@ execute_commands() {
     # Handle package removal
     if [[ $remove == 1 ]]; then
         ensure_docker_environment
-        ensure_ddev_project
+        
+        # Check if DDEV project exists
+        if ! check_ddev_project; then
+            return 1
+        fi
+        
         debug "Removing package: $removeparam"
         ddev composer remove "$removeparam"
     fi
@@ -1371,7 +1382,12 @@ execute_commands() {
     # Build shopware components
     if [[ $build == 1 ]]; then
         ensure_docker_environment
-        ensure_ddev_project
+        
+        # Check if DDEV project exists
+        if ! check_ddev_project; then
+            return 1
+        fi
+        
         debug "Building components: $buildparam"
         case "$buildparam" in
         "storefront" | "store" | "s")
@@ -1392,7 +1408,12 @@ execute_commands() {
     # Watch components
     if [[ $watch == 1 ]]; then
         ensure_docker_environment
-        ensure_ddev_project
+        
+        # Check if DDEV project exists
+        if ! check_ddev_project; then
+            return 1
+        fi
+        
         debug "Watching components: $watchparam"
         case "$watchparam" in
         "storefront" | "store" | "s")
@@ -1410,14 +1431,24 @@ execute_commands() {
     # Database operations
     if [[ $exportdb == 1 ]]; then
         ensure_docker_environment
-        ensure_ddev_project
+        
+        # Check if DDEV project exists
+        if ! check_ddev_project; then
+            return 1
+        fi
+        
         debug "Exporting database to: $exportdbparam"
         ddev export-db -f "$exportdbparam"
     fi
 
     if [[ $importdb == 1 ]]; then
         ensure_docker_environment
-        ensure_ddev_project
+        
+        # Check if DDEV project exists
+        if ! check_ddev_project; then
+            return 1
+        fi
+        
         debug "Importing database from: $importdbparam"
         check_file_exists "$importdbparam"
         ddev import-db -f "$importdbparam"
@@ -1453,21 +1484,36 @@ execute_commands() {
     # Direct command execution
     if [[ $ssh == 1 ]]; then
         ensure_docker_environment
-        ensure_ddev_project
+        
+        # Check if DDEV project exists
+        if ! check_ddev_project; then
+            return 1
+        fi
+        
         debug "Opening SSH connection..."
         ddev ssh
     fi
 
     if [[ $sequelace == 1 ]]; then
         ensure_docker_environment
-        ensure_ddev_project
+        
+        # Check if DDEV project exists
+        if ! check_ddev_project; then
+            return 1
+        fi
+        
         debug "Starting Sequel Ace..."
         ddev sequelace
     fi
 
     if [[ $launch == 1 ]]; then
         ensure_docker_environment
-        ensure_ddev_project
+        
+        # Check if DDEV project exists
+        if ! check_ddev_project; then
+            return 1
+        fi
+        
         if [[ -n "$launchparam" ]]; then
             debug "Opening specific URL: $launchparam"
             ddev launch "$launchparam"
@@ -1480,7 +1526,12 @@ execute_commands() {
     # Cache operations
     if [[ $deletecache == 1 ]]; then
         ensure_docker_environment
-        ensure_ddev_project
+        
+        # Check if DDEV project exists
+        if ! check_ddev_project; then
+            return 1
+        fi
+        
         debug "Deleting cache files..."
         ddev exec rm -rf var/cache/dev*
         ddev exec rm -rf var/cache/prod*
@@ -1489,7 +1540,12 @@ execute_commands() {
     # Testing
     if [[ $test == 1 ]]; then
         ensure_docker_environment
-        ensure_ddev_project
+        
+        # Check if DDEV project exists
+        if ! check_ddev_project; then
+            return 1
+        fi
+        
         debug "Running tests: ${testparam-}"
         ddev exec php bin/phpunit "${testparam-}"
     fi
@@ -1518,7 +1574,12 @@ execute_commands() {
     # Backup and restore
     if [[ $backup == 1 ]]; then
         ensure_docker_environment
-        ensure_ddev_project
+        
+        # Check if DDEV project exists
+        if ! check_ddev_project; then
+            return 1
+        fi
+        
         debug "Creating backup..."
         mkdir -p "$BACKUP_DIR"
         local backup_file
@@ -1529,7 +1590,12 @@ execute_commands() {
 
     if [[ $restore == 1 ]]; then
         ensure_docker_environment
-        ensure_ddev_project
+        
+        # Check if DDEV project exists
+        if ! check_ddev_project; then
+            return 1
+        fi
+        
         debug "Restoring from backup: ${restoreparam-backup.tar.gz}"
         check_file_exists "${restoreparam-backup.tar.gz}"
         ddev exec tar -xzf "${restoreparam-backup.tar.gz}"
@@ -1539,7 +1605,12 @@ execute_commands() {
     # Mail server
     if [[ $mail == 1 ]]; then
         ensure_docker_environment
-        ensure_ddev_project
+        
+        # Check if DDEV project exists
+        if ! check_ddev_project; then
+            return 1
+        fi
+        
         debug "Starting mail server..."
         ddev mailhog
     fi
@@ -1547,7 +1618,12 @@ execute_commands() {
     # Package handling
     if [[ $packages == 1 ]]; then
         ensure_docker_environment
-        ensure_ddev_project
+        
+        # Check if DDEV project exists
+        if ! check_ddev_project; then
+            return 1
+        fi
+        
         debug "Processing packages..."
         process_packages
     fi
@@ -1634,33 +1710,57 @@ ensure_ddev_project() {
     
     debug "Ensuring DDEV project is running..."
     
-    # First check if project exists
-    if ! ddev describe >/dev/null 2>&1; then
-        # Just show a simple message, don't make it look like an error
-        debug "No DDEV project found in current directory."
+    # Check if .ddev directory exists in the current directory
+    if [ ! -d ".ddev" ]; then
+        debug "No .ddev directory found in current directory. Not a DDEV project."
         return 1
     fi
     
-    # Check if project is already running
-    if ddev status | grep -q "running"; then
-        debug "DDEV project is already running"
+    # Check if .ddev/config.yaml exists
+    if [ ! -f ".ddev/config.yaml" ]; then
+        debug "No .ddev/config.yaml found. Not a valid DDEV project."
+        return 1
+    fi
+    
+    # Get project name from config.yaml
+    local project_name
+    project_name=$(grep "name:" .ddev/config.yaml | head -n1 | awk '{print $2}')
+    debug "Checking status for project: $project_name"
+    
+    # Check if container is running
+    docker ps | grep -q "ddev-${project_name}-web"
+    local running=$?
+    
+    debug "Container running status code: $running (0=running, 1=not running)"
+    
+    if [ $running -eq 0 ]; then
+        debug "DDEV project $project_name is already running"
         return 0
     else
-        # Check if auto-start is disabled explicitly
-        if [[ "$AUTO_START_PROJECT" == "false" || "$no_autostart" == "1" ]]; then
-            # Only debug message in case of disabled auto-start
-            debug "DDEV project is not running and auto-start is disabled. Use 'ddev start' to start it."
+        debug "DDEV project $project_name is not running, starting it..."
+        ddev start
+        local start_result=$?
+        debug "DDEV start result: $start_result (0=success, non-zero=failure)"
+        
+        if [ $start_result -ne 0 ]; then
+            error "Failed to start DDEV project. Please check for errors and try again."
             return 1
-        else
-            # Default behavior: auto-start project
-            debug "DDEV project is not running, starting it automatically..."
-            if ! ddev start; then
-                die "Failed to start DDEV project. Please check for errors and try again."
-            fi
-            debug "DDEV project started successfully"
-            return 0
         fi
+        
+        debug "DDEV project started successfully"
+        return 0
     fi
+}
+
+# Eine Hilfsfunktion für die Fehlermeldung, um Code-Duplizierung zu vermeiden
+check_ddev_project() {
+    if ! ensure_ddev_project; then
+        warn "This command requires a DDEV project, but none was found in the current directory."
+        info "Please change to a directory with a DDEV project or create one with 'ddev config'."
+        info "Alternatively, you can create a new project (Symfony or Shopware) with 'dev new'."
+        return 1
+    fi
+    return 0
 }
 
 # Start execution

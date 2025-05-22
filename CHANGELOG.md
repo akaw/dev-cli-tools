@@ -2,6 +2,24 @@
 
 All notable changes to the Development CLI Tools will be documented in this file.
 
+## [1.2.4] - 2024-05-22
+
+### Fixed
+- Fixed container auto-restart issue when running commands in a project that is already running
+- Fixed syntax errors in shell expressions that caused problems in some environments
+- Fixed unreliable container status detection with a more robust implementation
+- Fixed handling of directories with DDEV projects in subdirectories
+
+### Changed
+- Improved error messages when no DDEV project is found in current directory
+- Removed unnecessary auto-start configuration in favor of simpler, more predictable behavior
+- Enhanced Docker/DDEV environment checks to be more reliable and fail gracefully
+- Simplified project detection logic using direct filesystem checks
+
+### Improved
+- Resolved inconsistencies between README and CHANGELOG
+- Updated "Future Plans" to reflect current implementation status
+
 ## [1.2.3] - 2024-05-22
 
 ### Added
@@ -251,7 +269,7 @@ Each iteration was guided by AI assistance while maintaining focus on:
 
 ## Future Plans
 
-- [ ] Test coverage
+- [x] Test coverage
 - [ ] More Symfony specific commands
-- [ ] Enhanced error handling
+- [x] Enhanced error handling
 - [ ] Project templates
