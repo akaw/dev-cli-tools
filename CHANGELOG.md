@@ -2,6 +2,17 @@
 
 All notable changes to the Development CLI Tools will be documented in this file.
 
+## [1.2.5] - 2024-05-22
+
+### Added
+- Automatic version check on every run to notify about available updates
+- Daily cache to avoid frequent update checks
+- Improved upgrade process with clearer user feedback
+
+### Changed
+- Enhanced upgrade command to first check if an update is necessary
+- Better error handling during the upgrade process
+
 ## [1.2.4] - 2024-05-22
 
 ### Fixed

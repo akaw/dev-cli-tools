@@ -12,7 +12,7 @@
 # shellcheck disable=SC2034,SC2168,SC2317
 
 # Default Configuration
-VERSION="1.2.4"
+VERSION="1.2.5"
 DOCKER_ENVIRONMENT="${DOCKER_ENVIRONMENT:-orbstack}"
 BACKUP_DIR="${BACKUP_DIR:-.project/backups}"
 DB_EXPORT_FILE="${DB_EXPORT_FILE:-.project/db.sql.gz}"
@@ -229,21 +229,40 @@ default() {
 # Function to upgrade the script
 upgrade() {
     local script_path="${BASH_SOURCE[0]}"
-    echo "Loading latest version..."
+    info "Checking for updates..."
+    
+    # Check current version against latest version first
+    local latest_version
+    if ! latest_version=$(curl -s -m 5 "https://raw.githubusercontent.com/akaw/dev-cli-tools/main/src/dev" | grep -m 1 "^VERSION=" | cut -d'"' -f2); then
+        error "Could not check for updates. Please check your internet connection."
+        return 1
+    fi
+    
+    if [[ "$latest_version" == "$VERSION" ]]; then
+        info "You already have the latest version ($VERSION)."
+        return 0
+    fi
+    
+    info "New version found: $latest_version (current: $VERSION)"
+    info "Downloading update..."
 
     # Create backup
     cp "$script_path" "${script_path}.backup"
+    
+    # Remove update marker to force version check on next run
+    rm -f "/tmp/dev_update_check_$(date +%Y%m%d)" 2>/dev/null
 
     if curl -o "$script_path" "https://raw.githubusercontent.com/akaw/dev-cli-tools/main/src/dev"; then
         chmod +x "$script_path"
-        echo "Update successful!"
+        info "Update successful!"
         # Get the new version directly from the script
         VERSION=$(grep -m 1 "^VERSION=" "$script_path" | cut -d'"' -f2)
-        echo "New version: ${VERSION}"
+        info "New version: ${VERSION}"
+        info "Please restart your shell or run 'hash -r' to clear command cache."
     else
-        echo "Update failed. Restoring backup..."
+        error "Update failed. Restoring backup..."
         mv "${script_path}.backup" "$script_path"
-        exit 1
+        return 1
     fi
 
     rm -f "${script_path}.backup"
@@ -820,6 +839,46 @@ setup_config() {
     echo ""
 }
 
+# Function to check for updates
+check_for_updates() {
+    # Skip update check in test mode
+    if [[ "${DEV_TEST_MODE:-}" == "true" ]]; then
+        debug "Test mode detected, skipping update check"
+        return 0
+    fi
+    
+    # Skip if we've already checked recently (within 24 hours)
+    local update_marker="/tmp/dev_update_check_$(date +%Y%m%d)"
+    if [[ -f "$update_marker" ]]; then
+        debug "Update already checked today, skipping check"
+        return 0
+    fi
+    
+    # Create marker to avoid checking again today
+    touch "$update_marker"
+    
+    debug "Checking for updates..."
+    
+    # Try to get the latest version from GitHub
+    local latest_version
+    if ! latest_version=$(curl -s -m 3 "https://raw.githubusercontent.com/akaw/dev-cli-tools/main/src/dev" | grep -m 1 "^VERSION=" | cut -d'"' -f2); then
+        debug "Could not check for updates, network issue?"
+        return 1
+    fi
+    
+    debug "Current version: $VERSION, Latest version: $latest_version"
+    
+    # Compare versions (simple string comparison, assumes semantic versioning)
+    if [[ "$latest_version" != "$VERSION" && -n "$latest_version" ]]; then
+        info "A new version ($latest_version) of dev-cli-tools is available!"
+        info "You're currently using version $VERSION."
+        info "Run 'dev upgrade' to update to the latest version."
+        echo ""
+    fi
+    
+    return 0
+}
+
 # Parse command-line parameters
 parse_params() {
     # Initialize all command flags
@@ -1273,6 +1332,9 @@ main() {
         debug "Operating system: $OS"
         debug "Docker environment: ${DOCKER_ENVIRONMENT:-not set}"
     fi
+    
+    # Check for updates
+    check_for_updates
 
     # No arguments provided
     if [ $# -eq 0 ]; then
