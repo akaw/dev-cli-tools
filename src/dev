@@ -22,7 +22,7 @@ DEFAULT_MYSQL_VERSION="${DEFAULT_MYSQL_VERSION:-8.0}"
 LOG_FILE="${LOG_FILE:-dev.log}"
 PREFERRED_EDITOR="${PREFERRED_EDITOR:-}"  # Empty default means no editor will be launched
 CONFIG_FILE="${CONFIG_FILE:-$HOME/.dev-cli-tools.conf}"
-AUTO_START_PROJECT="${AUTO_START_PROJECT:-true}"  # Control project auto-start
+AUTO_START_PROJECT="${AUTO_START_PROJECT:-true}"  # Control project auto-start, defaults to true
 
 OS=$(uname -s)
 
@@ -424,10 +424,10 @@ ensure_docker_environment() {
                 debug "Docker environment verified as running (cached), skipping full check"
                 return 0
             else
-                debug "Marker says Docker is running but it appears to be down, will check and restart"
+                debug "Docker appears to be down, will restart automatically"
             fi
         else
-            debug "Docker environment was previously checked but not running, will try to start it"
+            debug "Docker was previously down, will try to start it"
         fi
     fi
     
@@ -454,10 +454,10 @@ ensure_docker_environment() {
     case "${DOCKER_ENVIRONMENT}" in
     "orbstack")
         if check_service_status "orbstack"; then
-            info "OrbStack is already running and operational"
+            debug "OrbStack is already running and operational"
             docker_running=true
         else
-            info "Starting OrbStack..."
+            debug "Starting OrbStack automatically..."
             if ! start_service "orbstack" "/Applications/OrbStack.app"; then
                 warn "Failed to automatically start OrbStack. Please start it manually."
                 warn "If OrbStack is already running, it might not be fully initialized or is in a broken state."
@@ -472,17 +472,17 @@ ensure_docker_environment() {
             docker_running=true
             
             # Wait for OrbStack to stabilize
-            info "Waiting 5 seconds for OrbStack to fully stabilize..."
+            debug "Waiting briefly for OrbStack to fully stabilize..."
             sleep 5
         fi
         ;;
     "docker")
         if check_service_status "docker"; then
-            info "Docker is already running and operational"
+            debug "Docker is already running and operational"
             docker_running=true
         else
             if [[ "$OS" == "Darwin" ]]; then
-                info "Starting Docker Desktop..."
+                debug "Starting Docker Desktop automatically..."
                 if ! start_service "docker" "Docker"; then
                     warn "Failed to automatically start Docker Desktop. Please start it manually."
                     
@@ -491,7 +491,7 @@ ensure_docker_environment() {
                     exit 1
                 fi
             else
-                info "Starting Docker service..."
+                debug "Starting Docker service automatically..."
                 if ! start_service "docker" "docker"; then
                     warn "Failed to automatically start Docker service. Please start it manually."
                     
@@ -505,7 +505,7 @@ ensure_docker_environment() {
             docker_running=true
             
             # Wait for Docker to stabilize
-            info "Waiting 5 seconds for Docker to fully stabilize..."
+            debug "Waiting briefly for Docker to fully stabilize..."
             sleep 5
         fi
         ;;
@@ -1636,7 +1636,8 @@ ensure_ddev_project() {
     
     # First check if project exists
     if ! ddev describe >/dev/null 2>&1; then
-        warn "No DDEV project found in current directory. Please initialize a DDEV project first."
+        # Just show a simple message, don't make it look like an error
+        debug "No DDEV project found in current directory."
         return 1
     fi
     
@@ -1645,19 +1646,19 @@ ensure_ddev_project() {
         debug "DDEV project is already running"
         return 0
     else
-        # Check if auto-start is enabled
-        if [[ "$AUTO_START_PROJECT" == "true" && "$no_autostart" != "1" ]]; then
-            info "DDEV project is not running, starting it now..."
+        # Check if auto-start is disabled explicitly
+        if [[ "$AUTO_START_PROJECT" == "false" || "$no_autostart" == "1" ]]; then
+            # Only debug message in case of disabled auto-start
+            debug "DDEV project is not running and auto-start is disabled. Use 'ddev start' to start it."
+            return 1
+        else
+            # Default behavior: auto-start project
+            debug "DDEV project is not running, starting it automatically..."
             if ! ddev start; then
                 die "Failed to start DDEV project. Please check for errors and try again."
             fi
-            info "DDEV project started successfully"
+            debug "DDEV project started successfully"
             return 0
-        else
-            # Auto-start disabled, just warn
-            warn "DDEV project is not running. Use 'ddev start' to start it, or enable auto-start."
-            warn "To enable auto-start, set AUTO_START_PROJECT=true or remove --no-autostart flag."
-            return 1
         fi
     fi
 }
