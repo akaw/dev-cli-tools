@@ -444,7 +444,7 @@ start_service() {
 
     debug "Waiting up to ${max_attempts}s for $service to start and become operational"
 
-    while [ $attempt -le $max_attempts ]; do
+    while [ "$attempt" -le "$max_attempts" ]; do
         if check_service_status "$env"; then
             info "$service is ready and operational (after ${attempt}s)"
             return 0
