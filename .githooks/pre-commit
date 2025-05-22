@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# Farben für die Ausgabe
+# Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
@@ -8,7 +8,7 @@ NC='\033[0m' # No Color
 
 echo -e "${YELLOW}Running pre-commit hook...${NC}"
 
-# Überprüfe die Versions-Konsistenz
+# Check version consistency
 echo -e "${YELLOW}Checking version consistency...${NC}"
 README_VERSION=$(grep -o "version-[0-9.]*" README.md | head -1 | cut -d'-' -f2)
 SCRIPT_VERSION=$(grep "^VERSION=" src/dev | cut -d'"' -f2)
@@ -21,7 +21,7 @@ else
     echo -e "${GREEN}Version consistency check passed${NC}"
 fi
 
-# Überprüfe Basis-Syntax
+# Check basic syntax
 if [ -f src/dev ]; then
     if ! bash -n src/dev; then
         echo -e "${RED}Bash syntax check failed. Please fix the errors before committing.${NC}"
@@ -29,7 +29,7 @@ if [ -f src/dev ]; then
     fi
 fi
 
-# Überprüfe auf ausführbare Rechte
+# Check for executable permissions
 if [ -f src/dev ] && [ ! -x src/dev ]; then
     echo -e "${RED}The script src/dev is not executable. Please run 'chmod +x src/dev'.${NC}"
     exit 1

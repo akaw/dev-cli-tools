@@ -55,7 +55,7 @@ teardown() {
 }
 
 @test "Composer command executes ddev composer" {
-    run run_dev c update
+    run run_dev com update
     [ "$status" -eq 0 ]
     
     # Check if ddev was called with correct parameters

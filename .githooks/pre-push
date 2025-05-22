@@ -1,46 +1,46 @@
 #!/usr/bin/env bash
 
-# Farben für die Ausgabe
+# Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
 NC='\033[0m' # No Color
 
-echo -e "${YELLOW}Führe lokale Tests vor dem Push aus...${NC}"
+echo -e "${YELLOW}Running local tests before push...${NC}"
 
 # ShellCheck
-echo -e "${YELLOW}Führe ShellCheck aus...${NC}"
+echo -e "${YELLOW}Running ShellCheck...${NC}"
 if ! command -v shellcheck &> /dev/null; then
-    echo -e "${RED}ShellCheck ist nicht installiert. Bitte installiere es mit 'brew install shellcheck'.${NC}"
+    echo -e "${RED}ShellCheck is not installed. Please install it with 'brew install shellcheck'.${NC}"
     exit 1
 fi
 
 if ! shellcheck src/dev; then
-    echo -e "${RED}ShellCheck hat Fehler gefunden. Bitte korrigiere sie, bevor du den Code pushst.${NC}"
+    echo -e "${RED}ShellCheck found errors. Please fix them before pushing your code.${NC}"
     exit 1
 fi
 
-echo -e "${GREEN}ShellCheck erfolgreich durchlaufen.${NC}"
+echo -e "${GREEN}ShellCheck passed successfully.${NC}"
 
 # BATS Tests
-echo -e "${YELLOW}Führe BATS Tests aus...${NC}"
+echo -e "${YELLOW}Running BATS tests...${NC}"
 if ! command -v bats &> /dev/null; then
-    echo -e "${RED}BATS ist nicht installiert. Bitte installiere es mit 'brew install bats-core'.${NC}"
+    echo -e "${RED}BATS is not installed. Please install it with 'brew install bats-core'.${NC}"
     exit 1
 fi
 
-# Setze Test-Mode für die Funktionstests
+# Set test mode for functional tests
 export DEV_TEST_MODE=true
 
 if ! bats tests/unit/*.bats; then
-    echo -e "${RED}BATS Tests sind fehlgeschlagen. Bitte korrigiere die Fehler, bevor du den Code pushst.${NC}"
+    echo -e "${RED}BATS tests failed. Please fix the errors before pushing your code.${NC}"
     exit 1
 fi
 
-echo -e "${GREEN}BATS Tests erfolgreich durchlaufen.${NC}"
+echo -e "${GREEN}BATS tests passed successfully.${NC}"
 
-# Überprüfe die Versions-Konsistenz
-echo -e "${YELLOW}Überprüfe Versionskonsistenz...${NC}"
+# Check version consistency
+echo -e "${YELLOW}Checking version consistency...${NC}"
 README_VERSION=$(grep -o "version-[0-9.]*" README.md | head -1 | cut -d'-' -f2)
 SCRIPT_VERSION=$(grep "^VERSION=" src/dev | cut -d'"' -f2)
 
@@ -48,30 +48,30 @@ echo "README Version: $README_VERSION"
 echo "Script Version: $SCRIPT_VERSION"
 
 if [ "$README_VERSION" != "$SCRIPT_VERSION" ]; then
-    echo -e "${RED}Versionen stimmen nicht überein! README: $README_VERSION, Script: $SCRIPT_VERSION${NC}"
+    echo -e "${RED}Versions don't match! README: $README_VERSION, Script: $SCRIPT_VERSION${NC}"
     exit 1
 else
-    echo -e "${GREEN}Versionskonsistenz: OK ($SCRIPT_VERSION)${NC}"
+    echo -e "${GREEN}Version consistency: OK ($SCRIPT_VERSION)${NC}"
 fi
 
 # Bash Syntax Check
-echo -e "${YELLOW}Überprüfe Bash Syntax...${NC}"
+echo -e "${YELLOW}Checking Bash syntax...${NC}"
 if ! bash -n src/dev; then
-    echo -e "${RED}Bash Syntax-Check fehlgeschlagen. Bitte korrigiere die Fehler, bevor du den Code pushst.${NC}"
+    echo -e "${RED}Bash syntax check failed. Please fix the errors before pushing your code.${NC}"
     exit 1
 fi
 
-echo -e "${GREEN}Bash Syntax-Check: OK${NC}"
+echo -e "${GREEN}Bash syntax check: OK${NC}"
 
-# Überprüfe, ob das Skript ausführbar ist
-echo -e "${YELLOW}Überprüfe, ob das Skript ausführbar ist...${NC}"
+# Check if script is executable
+echo -e "${YELLOW}Checking if script is executable...${NC}"
 if [ ! -x src/dev ]; then
-    echo -e "${RED}Das Skript src/dev ist nicht ausführbar. Bitte führe 'chmod +x src/dev' aus.${NC}"
+    echo -e "${RED}The script src/dev is not executable. Please run 'chmod +x src/dev'.${NC}"
     exit 1
 fi
 
-echo -e "${GREEN}Ausführbarkeits-Check: OK${NC}"
+echo -e "${GREEN}Executable check: OK${NC}"
 
-echo -e "${GREEN}Alle lokalen Tests erfolgreich durchlaufen. Der Push wird fortgesetzt.${NC}"
+echo -e "${GREEN}All local tests passed. Push will proceed.${NC}"
 
 exit 0 
