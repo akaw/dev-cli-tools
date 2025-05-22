@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# Colors for output
+# Colors for outpu
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
@@ -19,6 +19,41 @@ if [ "$README_VERSION" != "$SCRIPT_VERSION" ]; then
     exit 1
 else
     echo -e "${GREEN}Version consistency check passed${NC}"
+fi
+
+# Check for trailing whitespace in staged files
+echo -e "${YELLOW}Checking for trailing whitespace...${NC}"
+# Get list of staged files
+staged_files=$(git diff --cached --name-only --diff-filter=ACM)
+has_trailing_whitespace=0
+
+for file in $staged_files; do
+    # Skip binary files
+    if [[ -f "$file" ]] && [[ "$(file -b --mime "$file" | cut -d ';' -f1)" == "text/"* ]]; then
+        # Check for trailing whitespace
+        if grep -q -E '[ \t]+$' "$file"; then
+            if [[ $has_trailing_whitespace -eq 0 ]]; then
+                echo -e "${RED}Trailing whitespace detected in the following files:${NC}"
+                has_trailing_whitespace=1
+            fi
+            echo -e "${RED}- $file${NC}"
+            # Show the lines with trailing whitespace
+            grep -n -E '[ \t]+$' "$file" | head -5 | while read -r line; do
+                echo "   Line: $line"
+            done
+            if [[ $(grep -c -E '[ \t]+$' "$file") -gt 5 ]]; then
+                echo "   ... and more lines"
+            fi
+        fi
+    fi
+done
+
+if [[ $has_trailing_whitespace -eq 1 ]]; then
+    echo -e "${RED}Please remove trailing whitespace before committing.${NC}"
+    echo -e "${YELLOW}Tip: You can use 'sed -i '' 's/[ \t]*$//' <filename>' to remove trailing whitespace.${NC}"
+    exit 1
+else
+    echo -e "${GREEN}No trailing whitespace detected${NC}"
 fi
 
 # Check basic syntax
