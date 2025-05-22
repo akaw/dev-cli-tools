@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+
+# Pre-push hook für Dev-CLI-Tools
+# Führt umfassendere Tests durch, bevor Code gepusht wird
+
+set -e
+
+echo "🚀 Führe Pre-push Prüfungen durch..."
+
+# Führe shellcheck aus (wenn installiert)
+if command -v shellcheck &>/dev/null; then
+  echo "✓ Führe ShellCheck aus..."
+  shellcheck -S warning src/dev || {
+    echo "❌ ShellCheck hat Probleme gefunden!"
+    exit 1
+  }
+else
+  echo "⚠️ ShellCheck ist nicht installiert - überspringe Prüfung"
+  echo "   Installiere es mit 'brew install shellcheck' oder 'apt-get install shellcheck'"
+fi
+
+# Führe BATS-Tests aus (wenn vorhanden)
+if [ -d "tests" ] && [ -f "tests/test_dev.bats" ]; then
+  if command -v bats &>/dev/null; then
+    echo "✓ Führe BATS-Tests aus..."
+    
+    # Setze Testmodus, um Docker-Prüfungen zu überspringen
+    export DEV_TEST_MODE=true
+    
+    bats tests/test_dev.bats || {
+      echo "❌ BATS-Tests fehlgeschlagen!"
+      unset DEV_TEST_MODE
+      exit 1
+    }
+    
+    unset DEV_TEST_MODE
+  else
+    echo "⚠️ BATS ist nicht installiert - überspringe Tests"
+    echo "   Installiere es mit 'brew install bats-core' oder 'npm install -g bats'"
+  fi
+else
+  echo "⚠️ Keine BATS-Tests gefunden - überspringe Tests"
+fi
+
+echo "✅ Alle Pre-push Prüfungen bestanden!"
+exit 0 

@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+
+# Pre-commit hook für Dev-CLI-Tools
+# Führt grundlegende Codequalitätsprüfungen durch
+
+# Debug-Modus aktivieren falls gewünscht
+# set -x
+
+# Fehler beenden den Hook
+set -e
+
+echo "🔍 Führe Pre-commit Prüfungen durch..."
+
+# Prüfe Versionskonsistenz
+echo "✓ Prüfe Versionskonsistenz..."
+README_VERSION=$(grep -o "version-[0-9.]*" README.md | head -1 | cut -d'-' -f2)
+SCRIPT_VERSION=$(grep "^VERSION=" src/dev | cut -d'"' -f2)
+echo "  README Version: $README_VERSION"
+echo "  Script Version: $SCRIPT_VERSION"
+
+if [ "$README_VERSION" != "$SCRIPT_VERSION" ]; then
+  echo "❌ Versionen stimmen nicht überein!"
+  echo "   README: $README_VERSION"
+  echo "   Skript: $SCRIPT_VERSION"
+  exit 1
+fi
+
+# Prüfe Syntax
+echo "✓ Prüfe Bash-Syntax..."
+bash -n src/dev
+
+# Prüfe Ausführbarkeit
+echo "✓ Prüfe Ausführbarkeit des Skripts..."
+if [ ! -x src/dev ]; then
+  echo "❌ Das Skript src/dev ist nicht ausführbar!"
+  exit 1
+fi
+
+# Prüfe Formatierung
+echo "✓ Prüfe Formatierung..."
+
+# Prüfe auf Tabs
+echo "  - Suche nach Tabs..."
+TAB=$(printf '\t')
+TABS_FOUND=$(grep -l "$TAB" src/dev || true)
+if [ -n "$TABS_FOUND" ]; then
+  echo "❌ Tabs gefunden (verwende 4 Spaces statt Tabs):"
+  grep -n "$TAB" src/dev | head -5
+  exit 1
+fi
+echo "    Keine Tabs gefunden"
+
+# Prüfe auf Trailing Whitespace
+echo "  - Prüfe auf Trailing Whitespace..."
+WHITESPACE_FOUND=$(grep -l -E '\s+$' src/dev || true)
+if [ -n "$WHITESPACE_FOUND" ]; then
+  echo "❌ Trailing Whitespace gefunden:"
+  grep -n -E '\s+$' src/dev | head -5
+  exit 1
+fi
+echo "    Kein Trailing Whitespace gefunden"
+
+# Prüfe Zeilenlänge (nur für Code, nicht für Kommentare und Strings)
+echo "  - Prüfe Zeilenlänge..."
+LONG_LINES=$(grep -v '^\s*#' src/dev | grep -v "\"\\|'" | grep -E '.{120,}' || true)
+if [ -n "$LONG_LINES" ]; then
+  echo "❌ Zeilen länger als 120 Zeichen gefunden:"
+  echo "$LONG_LINES" | head -5
+  exit 1
+fi
+echo "    Keine zu langen Zeilen gefunden"
+
+echo "✅ Alle Pre-commit Prüfungen bestanden!"
+exit 0 

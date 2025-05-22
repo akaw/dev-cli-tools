@@ -361,3 +361,15 @@ Each iteration was guided by AI assistance while maintaining focus on:
 - [ ] More Symfony specific commands
 - [x] Enhanced error handling
 - [ ] Project templates
+
+## v1.3.3 (2024-05-XX)
+
+### Verbesserungen
+- Git Hooks für lokale Code-Qualitätsprüfungen hinzugefügt
+  - pre-commit Hook: Prüft Versionskonsistenz, Syntax, Ausführbarkeit und Formatierung
+  - pre-push Hook: Führt ShellCheck und BATS-Tests aus (wenn vorhanden)
+- Dokumentation zur Testinfrastruktur in TESTING.md hinzugefügt
+- Verbesserte Formatierung (Trailing Whitespaces entfernt)
+
+### Fehlerbehebungen
+- Trailing Whitespaces in der Hauptdatei entfernt

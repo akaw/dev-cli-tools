@@ -2,7 +2,7 @@
 
 CLI tool to simplify daily development work with DDEV, Shopware and Symfony.
 
-[![Version](https://img.shields.io/badge/version-1.3.2-blue.svg)](https://github.com/akaw/dev-cli-tools/releases)
+[![Version](https://img.shields.io/badge/version-1.3.3-blue.svg)](https://github.com/akaw/dev-cli-tools/releases)
 [![Build Status](https://github.com/akaw/dev-cli-tools/actions/workflows/test.yml/badge.svg)](https://github.com/akaw/dev-cli-tools/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Shellcheck](https://img.shields.io/badge/shellcheck-passing-brightgreen.svg)](https://www.shellcheck.net/)
@@ -240,3 +240,23 @@ Andre Witte
 - [ ] More Symfony specific commands
 - [x] Enhanced error handling
 - [ ] Project templates
+
+## Git Hooks für Entwickler
+
+Um Formatierungsfehler und andere Probleme vor dem Commit und Push zu erkennen, kannst du die Git Hooks verwenden:
+
+```bash
+# Kopiere die Hooks in dein .git-Verzeichnis
+cp hooks/pre-commit .git/hooks/
+cp hooks/pre-push .git/hooks/
+chmod +x .git/hooks/pre-commit .git/hooks/pre-push
+
+# Oder setze den Hooks-Pfad direkt (einfacher)
+git config core.hooksPath hooks
+```
+
+Die Hooks führen automatisch Prüfungen durch:
+- **pre-commit**: Versionskonsistenz, Syntax, Ausführbarkeit, Formatierung (Tabs, Zeilenlänge, etc.)
+- **pre-push**: ShellCheck und BATS-Tests (falls installiert)
+
+Details zur Testinfrastruktur und -strategie findest du in [TESTING.md](TESTING.md).

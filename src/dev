@@ -6,13 +6,13 @@
 #
 # Description: dDEV shortening tools
 # Usage: dev [OPTIONS] [PARAMETERS]
-# Version: 1.3.2
+# Version: 1.3.3
 # https://github.com/akaw/dev-cli-tools/
 #
 # shellcheck disable=SC2034,SC2168,SC2317
 
 # Default Configuration
-VERSION="1.3.2"
+VERSION="1.3.3"
 DOCKER_ENVIRONMENT="${DOCKER_ENVIRONMENT:-orbstack}"
 BACKUP_DIR="${BACKUP_DIR:-.project/backups}"
 DB_EXPORT_FILE="${DB_EXPORT_FILE:-.project/db.sql.gz}"
@@ -102,10 +102,8 @@ OPTIONS:
 
 CONFIGURATION:
     setup                Run configuration wizard
-    
     You can customize settings by running 'dev setup' or by editing:
     $CONFIG_FILE
-    
     Configuration options include:
     - DOCKER_ENVIRONMENT: orbstack or docker
     - PREFERRED_EDITOR: code, phpstorm, etc.
@@ -163,7 +161,7 @@ SHOPWARE:
     pu | plup | pl:up | plugin:update      Update plugin
 
 Examples:
-    dev        Start development environment 
+    dev        Start development environment
     dev u      Start project
     dev ci     Composer Install
     dev new    Create new project
@@ -207,7 +205,6 @@ msg() {
 # This function is called when no arguments are provided
 default() {
     ensure_docker_environment
-    
     # Check if DDEV project exists and start it
     if ddev describe >/dev/null 2>&1; then
         ensure_ddev_project
@@ -218,7 +215,6 @@ default() {
         warn "No DDEV project found in current directory."
         warn "Use 'ddev config' to initialize a new project or change to a project directory."
     fi
-    
     # Open editor if configured
     if [[ -n "$PREFERRED_EDITOR" ]]; then
         debug "Opening project in $PREFERRED_EDITOR"
@@ -230,28 +226,23 @@ default() {
 upgrade() {
     local script_path="${BASH_SOURCE[0]}"
     info "Checking for updates..."
-    
     # Check current version against latest version first
     local latest_version
     if ! latest_version=$(curl -s -m 5 "https://raw.githubusercontent.com/akaw/dev-cli-tools/main/src/dev" | grep -m 1 "^VERSION=" | cut -d'"' -f2); then
         error "Could not check for updates. Please check your internet connection."
         return 1
     fi
-    
     if [[ "$latest_version" == "$VERSION" ]]; then
         info "You already have the latest version ($VERSION)."
         return 0
     fi
-    
     info "New version found: $latest_version (current: $VERSION)"
     info "Downloading update..."
 
     # Create backup
     cp "$script_path" "${script_path}.backup"
-    
-    # Remove update marker to force version check on next run
+        # Remove update marker to force version check on next run
     rm -f "/tmp/dev_update_check_$(date +%Y%m%d)" 2>/dev/null
-
     if curl -o "$script_path" "https://raw.githubusercontent.com/akaw/dev-cli-tools/main/src/dev"; then
         chmod +x "$script_path"
         info "Update successful!"
@@ -289,7 +280,6 @@ check_service_status() {
             if pgrep -f "OrbStack" >/dev/null ||
                 launchctl list | grep -q "com.orbstack.OrbStack" ||
                 [[ -S "$HOME/.orbstack/run/docker.sock" ]]; then
-                
                 # Additionally verify Docker is operational by running a simple command
                 if docker info >/dev/null 2>&1; then
                     debug "OrbStack is running and Docker is operational"
@@ -421,19 +411,18 @@ ensure_docker_environment() {
         debug "Test mode detected, skipping Docker environment check"
         return 0
     fi
-    
     # Declare variable first, then assign value
     local temp_marker
     temp_marker="/tmp/dev_docker_verified_$(date +%Y%m%d)"
     local marker_status=""
-    
+
     # Always check Docker first if ALWAYS_CHECK_DOCKER is set
     if [[ "${ALWAYS_CHECK_DOCKER:-}" == "true" ]]; then
         debug "ALWAYS_CHECK_DOCKER is set, forcing Docker check"
     # Otherwise check for marker
     elif [[ -f "$temp_marker" ]]; then
         marker_status=$(cat "$temp_marker" 2>/dev/null)
-        
+
         # Skip verification if marker indicates Docker is running
         if [[ "$marker_status" == "running" ]]; then
             # Quick verify with docker command to be sure
@@ -447,14 +436,14 @@ ensure_docker_environment() {
             debug "Docker was previously down, will try to start it"
         fi
     fi
-    
+
     debug "Verifying Docker environment..."
-    
+
     # Check if DDEV is installed
     if ! command -v ddev &>/dev/null; then
         die "ddev is not installed. Please install ddev first."
     fi
-    
+
     if [[ -z "${DOCKER_ENVIRONMENT:-}" ]]; then
         die "DOCKER_ENVIRONMENT is not set. Please set it to 'orbstack' or 'docker'"
     fi
@@ -467,7 +456,7 @@ ensure_docker_environment() {
     fi
 
     local docker_running=false
-    
+
     case "${DOCKER_ENVIRONMENT}" in
     "orbstack")
         if check_service_status "orbstack"; then
@@ -479,15 +468,15 @@ ensure_docker_environment() {
                 warn "Failed to automatically start OrbStack. Please start it manually."
                 warn "If OrbStack is already running, it might not be fully initialized or is in a broken state."
                 warn "Try restarting OrbStack manually and then run the command again."
-                
+
                 # Mark as not running in the marker file
                 echo "not_running" > "$temp_marker"
                 exit 1
             fi
-            
+
             # Successfully started
             docker_running=true
-            
+
             # Wait for OrbStack to stabilize
             debug "Waiting briefly for OrbStack to fully stabilize..."
             sleep 5
@@ -502,7 +491,7 @@ ensure_docker_environment() {
                 debug "Starting Docker Desktop automatically..."
                 if ! start_service "docker" "Docker"; then
                     warn "Failed to automatically start Docker Desktop. Please start it manually."
-                    
+
                     # Mark as not running in the marker file
                     echo "not_running" > "$temp_marker"
                     exit 1
@@ -511,23 +500,23 @@ ensure_docker_environment() {
                 debug "Starting Docker service automatically..."
                 if ! start_service "docker" "docker"; then
                     warn "Failed to automatically start Docker service. Please start it manually."
-                    
+
                     # Mark as not running in the marker file
                     echo "not_running" > "$temp_marker"
                     exit 1
                 fi
             fi
-            
+
             # Successfully started
             docker_running=true
-            
+
             # Wait for Docker to stabilize
             debug "Waiting briefly for Docker to fully stabilize..."
             sleep 5
         fi
         ;;
     esac
-    
+
     # Double-check Docker is actually running before updating marker
     if [[ "$docker_running" == "true" ]] && docker info >/dev/null 2>&1; then
         echo "running" > "$temp_marker"
@@ -540,12 +529,12 @@ ensure_docker_environment() {
             debug "Docker environment verified as not running and marker updated"
         fi
     fi
-    
+
     # Final verification - make sure Docker is actually running
     if ! docker info >/dev/null 2>&1; then
         die "Docker environment verification failed. Please start Docker/OrbStack manually and try again."
     fi
-    
+
     return 0
 }
 
@@ -706,7 +695,7 @@ load_config() {
         debug "Test mode detected, skipping config loading"
         return 0
     fi
-    
+
     if [[ -f "$CONFIG_FILE" && -r "$CONFIG_FILE" ]]; then
         debug "Loading configuration from $CONFIG_FILE"
         # shellcheck source=/dev/null
@@ -721,25 +710,25 @@ load_config() {
 # Save configuration to file
 save_config() {
     debug "Saving configuration to $CONFIG_FILE"
-    
+
     # Create directory if it doesn't exist
     mkdir -p "$(dirname "$CONFIG_FILE")"
-    
+
     # Clear existing file
     true > "$CONFIG_FILE"
-    
+
     # Write configuration values
     echo "# DEV CLI Tools Configuration" > "$CONFIG_FILE"
     echo "# Generated on $(date)" >> "$CONFIG_FILE"
     echo "" >> "$CONFIG_FILE"
-    
+
     [[ -n "$DOCKER_ENVIRONMENT" ]] && echo "export DOCKER_ENVIRONMENT=\"$DOCKER_ENVIRONMENT\"" >> "$CONFIG_FILE"
     [[ -n "$PREFERRED_EDITOR" ]] && echo "export PREFERRED_EDITOR=\"$PREFERRED_EDITOR\"" >> "$CONFIG_FILE"
     [[ -n "$DEFAULT_PHP_VERSION" ]] && echo "export DEFAULT_PHP_VERSION=\"$DEFAULT_PHP_VERSION\"" >> "$CONFIG_FILE"
     [[ -n "$DEFAULT_NODE_VERSION" ]] && echo "export DEFAULT_NODE_VERSION=\"$DEFAULT_NODE_VERSION\"" >> "$CONFIG_FILE"
     [[ -n "$DEFAULT_MYSQL_VERSION" ]] && echo "export DEFAULT_MYSQL_VERSION=\"$DEFAULT_MYSQL_VERSION\"" >> "$CONFIG_FILE"
     [[ -n "$LOG_LEVEL" ]] && echo "export LOG_LEVEL=\"$LOG_LEVEL\"" >> "$CONFIG_FILE"
-    
+
     info "Configuration saved to $CONFIG_FILE"
 }
 
@@ -748,7 +737,7 @@ setup_config() {
     info "Welcome to DEV CLI Tools Setup"
     info "This will configure your preferences for DEV CLI Tools"
     echo ""
-    
+
     # Docker environment
     echo "Select your preferred Docker environment:"
     echo "1) OrbStack (recommended for macOS)"
@@ -756,18 +745,18 @@ setup_config() {
     echo "3) Native Docker (Linux)"
     echo ""
     read -r -p "Enter your choice [1-3, default: 1]: " docker_choice
-    
+
     case "${docker_choice:-1}" in
         1) DOCKER_ENVIRONMENT="orbstack" ;;
         2) DOCKER_ENVIRONMENT="docker" ;;
         3) DOCKER_ENVIRONMENT="docker" ;;
         *) DOCKER_ENVIRONMENT="orbstack" ;;
     esac
-    
+
     echo ""
     echo "Docker environment set to: $DOCKER_ENVIRONMENT"
     echo ""
-    
+
     # Preferred editor
     echo "Select your preferred code editor:"
     echo "1) No default editor"
@@ -777,63 +766,63 @@ setup_config() {
     echo "5) Custom (specify command)"
     echo ""
     read -r -p "Enter your choice [1-5, default: 1]: " editor_choice
-    
+
     case "${editor_choice:-1}" in
         1) PREFERRED_EDITOR="" ;;
         2) PREFERRED_EDITOR="code" ;;
         3) PREFERRED_EDITOR="phpstorm" ;;
         4) PREFERRED_EDITOR="subl" ;;
-        5) 
+        5)
             read -r -p "Enter the command to open your editor: " custom_editor
             PREFERRED_EDITOR="$custom_editor"
             ;;
         *) PREFERRED_EDITOR="" ;;
     esac
-    
+
     if [[ -n "$PREFERRED_EDITOR" ]]; then
         echo "Preferred editor set to: $PREFERRED_EDITOR"
     else
         echo "No default editor set"
     fi
     echo ""
-    
+
     # Default PHP version
     read -r -p "Enter default PHP version [default: 8.2]: " php_version
     DEFAULT_PHP_VERSION="${php_version:-8.2}"
     echo "Default PHP version set to: $DEFAULT_PHP_VERSION"
     echo ""
-    
+
     # Default Node.js version
     read -r -p "Enter default Node.js version [default: 20]: " node_version
     DEFAULT_NODE_VERSION="${node_version:-20}"
     echo "Default Node.js version set to: $DEFAULT_NODE_VERSION"
     echo ""
-    
+
     # Default MySQL version
     read -r -p "Enter default MySQL version [default: 8.0]: " mysql_version
     DEFAULT_MYSQL_VERSION="${mysql_version:-8.0}"
     echo "Default MySQL version set to: $DEFAULT_MYSQL_VERSION"
     echo ""
-    
+
     # Log level
     echo "Select log level:"
     echo "1) INFO (standard level, recommended)"
     echo "2) DEBUG (verbose output for troubleshooting)"
     echo ""
     read -r -p "Enter your choice [1-2, default: 1]: " log_level_choice
-    
+
     case "${log_level_choice:-1}" in
         1) LOG_LEVEL="INFO" ;;
         2) LOG_LEVEL="DEBUG" ;;
         *) LOG_LEVEL="INFO" ;;
     esac
-    
+
     echo "Log level set to: $LOG_LEVEL"
     echo ""
-    
+
     # Save configuration
     save_config
-    
+
     info "Setup complete! Your preferences have been saved."
     info "You can change these settings any time by running 'dev setup' again."
     echo ""
@@ -846,7 +835,7 @@ check_for_updates() {
         debug "Test mode detected, skipping update check"
         return 0
     fi
-    
+
     # Skip if we've already checked recently (within 24 hours)
     local update_marker
     update_marker="/tmp/dev_update_check_$(date +%Y%m%d)"
@@ -854,21 +843,21 @@ check_for_updates() {
         debug "Update already checked today, skipping check"
         return 0
     fi
-    
+
     # Create marker to avoid checking again today
     touch "$update_marker"
-    
+
     debug "Checking for updates..."
-    
+
     # Try to get the latest version from GitHub
     local latest_version
     if ! latest_version=$(curl -s -m 3 "https://raw.githubusercontent.com/akaw/dev-cli-tools/main/src/dev" | grep -m 1 "^VERSION=" | cut -d'"' -f2); then
         debug "Could not check for updates, network issue?"
         return 1
     fi
-    
+
     debug "Current version: $VERSION, Latest version: $latest_version"
-    
+
     # Compare versions (simple string comparison, assumes semantic versioning)
     if [[ "$latest_version" != "$VERSION" && -n "$latest_version" ]]; then
         info "A new version ($latest_version) of dev-cli-tools is available!"
@@ -876,7 +865,7 @@ check_for_updates() {
         info "Run 'dev upgrade' to update to the latest version."
         echo ""
     fi
-    
+
     return 0
 }
 
@@ -1311,7 +1300,7 @@ main() {
 
     # Load configuration if available
     load_config || debug "No existing configuration found, using defaults"
-    
+
     # Skip configuration setup in test mode or for special commands
     if [[ ! "${DEV_TEST_MODE:-}" == "true" ]] && [[ ! -f "$CONFIG_FILE" ]]; then
         info "This appears to be your first time running DEV CLI Tools."
@@ -1333,7 +1322,7 @@ main() {
         debug "Operating system: $OS"
         debug "Docker environment: ${DOCKER_ENVIRONMENT:-not set}"
     fi
-    
+
     # Check for updates
     check_for_updates
 
@@ -1356,19 +1345,19 @@ execute_commands() {
     if [[ $console == 1 ]]; then
         # Only verify Docker when actually needed
         ensure_docker_environment
-        
+
         # Use the new helper function
         if ! check_and_ensure_running_container; then
             return 1
         fi
-        
+
         # Special handling for cache:clear command to avoid unnecessary restarts
         if [[ $consoleparam == "cache:clear" ]]; then
             debug "Running cache:clear command directly..."
-            
+
             local console_flags=""
             [[ $verbose == 1 ]] && console_flags+=" -v"
-            
+
             # Add deprecation handling for Shopware console commands via environment variable
             if [[ -f "bin/console" && -d "vendor/shopware" ]]; then
                 debug "Automatically suppressing deprecation warnings for Shopware via SYMFONY_DEPRECATIONS_HELPER"
@@ -1378,21 +1367,21 @@ execute_commands() {
             fi
             return 0
         fi
-        
+
         debug "Executing console command: $consoleparam"
         local console_flags=""
         local env_vars=""
-        
+
         # Add deprecation handling for Shopware console commands via environment variable
         if [[ -f "bin/console" && -d "vendor/shopware" ]]; then
             env_vars="SYMFONY_DEPRECATIONS_HELPER=weak"
             debug "Automatically suppressing deprecation warnings for Shopware via SYMFONY_DEPRECATIONS_HELPER"
         fi
-        
+
         # Still respect explicit flag if set, but use it only for logging purposes
         [[ $no_deprecations == 1 ]] && debug "Deprecation warnings suppressed via user flag"
         [[ $verbose == 1 ]] && console_flags+=" -v"
-        
+
         if [[ -n "$env_vars" ]]; then
             ddev exec "$env_vars" bin/console "$console_flags" "$consoleparam"
         else
@@ -1403,12 +1392,12 @@ execute_commands() {
     # Run composer commands
     if [[ $composer == 1 ]]; then
         ensure_docker_environment
-        
+
         # Use the new helper function
         if ! check_and_ensure_running_container; then
             return 1
         fi
-        
+
         debug "Running composer command: $composerparam"
         ddev composer "$composerparam"
     fi
@@ -1416,12 +1405,12 @@ execute_commands() {
     # Handle package requirements
     if [[ $require == 1 ]]; then
         ensure_docker_environment
-        
+
         # Use our optimized container check function
         if ! check_and_ensure_running_container; then
             return 1
         fi
-        
+
         debug "Adding package: $requireparam"
         if [[ $prefersource == 1 ]]; then
             ddev composer require "$requireparam" --prefer-source
@@ -1433,12 +1422,12 @@ execute_commands() {
     # Handle package removal
     if [[ $remove == 1 ]]; then
         ensure_docker_environment
-        
+
         # Use our optimized container check function
         if ! check_and_ensure_running_container; then
             return 1
         fi
-        
+
         debug "Removing package: $removeparam"
         ddev composer remove "$removeparam"
     fi
@@ -1446,12 +1435,12 @@ execute_commands() {
     # Build shopware components
     if [[ $build == 1 ]]; then
         ensure_docker_environment
-        
+
         # Use our optimized container check function
         if ! check_and_ensure_running_container; then
             return 1
         fi
-        
+
         debug "Building components: $buildparam"
         case "$buildparam" in
         "storefront" | "store" | "s")
@@ -1472,12 +1461,12 @@ execute_commands() {
     # Watch components
     if [[ $watch == 1 ]]; then
         ensure_docker_environment
-        
+
         # Use our optimized container check function
         if ! check_and_ensure_running_container; then
             return 1
         fi
-        
+
         debug "Watching components: $watchparam"
         case "$watchparam" in
         "storefront" | "store" | "s")
@@ -1495,24 +1484,24 @@ execute_commands() {
     # Database operations
     if [[ $exportdb == 1 ]]; then
         ensure_docker_environment
-        
+
         # Use our optimized container check function
         if ! check_and_ensure_running_container; then
             return 1
         fi
-        
+
         debug "Exporting database to: $exportdbparam"
         ddev export-db -f "$exportdbparam"
     fi
 
     if [[ $importdb == 1 ]]; then
         ensure_docker_environment
-        
+
         # Use our optimized container check function
         if ! check_and_ensure_running_container; then
             return 1
         fi
-        
+
         debug "Importing database from: $importdbparam"
         check_file_exists "$importdbparam"
         ddev import-db -f "$importdbparam"
@@ -1548,36 +1537,36 @@ execute_commands() {
     # Direct command execution
     if [[ $ssh == 1 ]]; then
         ensure_docker_environment
-        
+
         # Use our optimized container check function
         if ! check_and_ensure_running_container; then
             return 1
         fi
-        
+
         debug "Opening SSH connection..."
         ddev ssh
     fi
 
     if [[ $sequelace == 1 ]]; then
         ensure_docker_environment
-        
+
         # Use our optimized container check function
         if ! check_and_ensure_running_container; then
             return 1
         fi
-        
+
         debug "Starting Sequel Ace..."
         ddev sequelace
     fi
 
     if [[ $launch == 1 ]]; then
         ensure_docker_environment
-        
+
         # Use our optimized container check function
         if ! check_and_ensure_running_container; then
             return 1
         fi
-        
+
         if [[ -n "$launchparam" ]]; then
             debug "Opening specific URL: $launchparam"
             ddev launch "$launchparam"
@@ -1590,12 +1579,12 @@ execute_commands() {
     # Cache operations
     if [[ $deletecache == 1 ]]; then
         ensure_docker_environment
-        
+
         # Use our optimized container check function
         if ! check_and_ensure_running_container; then
             return 1
         fi
-        
+
         debug "Deleting cache files..."
         ddev exec rm -rf var/cache/dev*
         ddev exec rm -rf var/cache/prod*
@@ -1604,12 +1593,12 @@ execute_commands() {
     # Testing
     if [[ $test == 1 ]]; then
         ensure_docker_environment
-        
+
         # Use our optimized container check function
         if ! check_and_ensure_running_container; then
             return 1
         fi
-        
+
         debug "Running tests: ${testparam-}"
         ddev exec php bin/phpunit "${testparam-}"
     fi
@@ -1638,12 +1627,12 @@ execute_commands() {
     # Backup and restore
     if [[ $backup == 1 ]]; then
         ensure_docker_environment
-        
+
         # Use our optimized container check function
         if ! check_and_ensure_running_container; then
             return 1
         fi
-        
+
         debug "Creating backup..."
         mkdir -p "$BACKUP_DIR"
         local backup_file
@@ -1654,12 +1643,12 @@ execute_commands() {
 
     if [[ $restore == 1 ]]; then
         ensure_docker_environment
-        
+
         # Use our optimized container check function
         if ! check_and_ensure_running_container; then
             return 1
         fi
-        
+
         debug "Restoring from backup: ${restoreparam-backup.tar.gz}"
         check_file_exists "${restoreparam-backup.tar.gz}"
         ddev exec tar -xzf "${restoreparam-backup.tar.gz}"
@@ -1669,12 +1658,12 @@ execute_commands() {
     # Mail server
     if [[ $mail == 1 ]]; then
         ensure_docker_environment
-        
+
         # Use our optimized container check function
         if ! check_and_ensure_running_container; then
             return 1
         fi
-        
+
         debug "Starting mail server..."
         ddev mailhog
     fi
@@ -1682,16 +1671,16 @@ execute_commands() {
     # Package handling
     if [[ $packages == 1 ]]; then
         ensure_docker_environment
-        
+
         # Use our optimized container check function
         if ! check_and_ensure_running_container; then
             return 1
         fi
-        
+
         debug "Processing packages..."
         process_packages
     fi
-    
+
     # New project creation
     if [[ $new == 1 ]]; then
         ensure_docker_environment
@@ -1771,7 +1760,7 @@ check_and_ensure_running_container() {
         debug "Test mode detected, skipping container status check"
         return 0
     fi
-    
+
     # First check if we're even in a valid project directory
     if [ ! -d ".ddev" ] || [ ! -f ".ddev/config.yaml" ]; then
         warn "This command requires a DDEV project, but none was found in the current directory."
@@ -1779,14 +1768,14 @@ check_and_ensure_running_container() {
         info "Alternatively, you can create a new project (Symfony or Shopware) with 'dev new'."
         return 1
     fi
-    
+
     # Get project name to check container status
     local project_name
     project_name=$(grep "name:" .ddev/config.yaml | head -n1 | awk '{print $2}')
     debug "Found DDEV project: $project_name"
-    
+
     echo "DEBUG: Checking container status for project: $project_name"
-    
+
     # APPROACH 1: Try direct docker container check first (most reliable)
     echo "DEBUG: Checking for running Docker container..."
     local container_running=false
@@ -1796,29 +1785,29 @@ check_and_ensure_running_container() {
     else
         echo "DEBUG: Docker container check: No running container for project found"
     fi
-    
+
     # APPROACH 2: Try ddev status JSON output as backup
     if [[ "$container_running" != "true" ]]; then
         echo "DEBUG: Trying DDEV JSON status check as alternative..."
-        
+
         # Check if we can get JSON output from ddev
         local json_output
         if json_output=$(ddev describe --json-output 2>/dev/null); then
             echo "DEBUG: Successfully got JSON output from DDEV"
-            
+
             # If jq is available, use it for proper parsing
             if command -v jq >/dev/null 2>&1; then
                 local json_status
                 json_status=$(echo "$json_output" | jq -r '.[0].status' 2>/dev/null)
                 echo "DEBUG: JSON status: '$json_status'"
-                
+
                 if [[ "$json_status" == "running" || "$json_status" == "Running" ]]; then
                     echo "DEBUG: JSON check confirms container is running (status: $json_status)"
                     container_running=true
                 fi
             else
                 # Fallback for systems without jq - crude grep for running status
-                if echo "$json_output" | grep -q '"status":"running"' || 
+                if echo "$json_output" | grep -q '"status":"running"' ||
                    echo "$json_output" | grep -q '"status":"Running"'; then
                     echo "DEBUG: Simple JSON grep confirms container is running"
                     container_running=true
@@ -1828,7 +1817,7 @@ check_and_ensure_running_container() {
             echo "DEBUG: Failed to get JSON output from DDEV"
         fi
     fi
-    
+
     # Final decision based on our checks
     if [[ "$container_running" == "true" ]]; then
         echo "DEBUG: FINAL DETERMINATION: Container IS running - no restart needed"
@@ -1852,9 +1841,9 @@ ensure_ddev_project() {
         debug "Test mode detected, skipping DDEV project check"
         return 0
     fi
-    
+
     debug "Ensuring DDEV project is running..."
-    
+
     # Use the new helper function - call directly and return its status
     check_and_ensure_running_container
     return $?
@@ -1863,7 +1852,7 @@ ensure_ddev_project() {
 # Eine Hilfsfunktion für die Fehlermeldung, um Code-Duplizierung zu vermeiden
 check_ddev_project() {
     debug "Calling check_ddev_project..."
-    
+
     # Use the new helper function - call directly and return its status
     check_and_ensure_running_container
     return $?

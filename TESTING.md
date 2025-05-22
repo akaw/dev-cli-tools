@@ -16,22 +16,36 @@ Vor jedem Commit werden folgende Prüfungen durchgeführt:
 - Versionskonsistenz zwischen README.md und Skript
 - Bash-Syntax-Prüfung
 - Ausführbarkeits-Check für das Skript
-
-Um die Git Hooks zu aktivieren:
-```bash
-git config core.hooksPath .githooks
-```
+- Formatierungsprüfungen:
+  - Keine Tabs (nur Spaces)
+  - Kein Trailing Whitespace
+  - Code-Zeilen kürzer als 120 Zeichen
 
 ### Pre-Push Hook
 
 Vor jedem Push werden umfassendere Tests durchgeführt:
-- ShellCheck-Prüfung
-- BATS Unit Tests
-- Versionskonsistenz
-- Bash-Syntax-Prüfung
-- Ausführbarkeits-Check
+- ShellCheck-Prüfung (wenn installiert)
+- BATS-Tests (wenn installiert)
+- Versionskonsistenz (wird bereits im pre-commit geprüft)
 
 Diese Hooks stellen sicher, dass nur getesteter Code ins Repository gepusht wird.
+
+### Einrichtung der Git Hooks
+
+Um die Git Hooks zu aktivieren, führe folgende Befehle aus:
+
+```bash
+# Im Projektverzeichnis
+cp hooks/pre-commit .git/hooks/
+cp hooks/pre-push .git/hooks/
+chmod +x .git/hooks/pre-commit .git/hooks/pre-push
+```
+
+Alternativ kannst du auch den Hooks-Pfad direkt auf das hooks-Verzeichnis setzen:
+
+```bash
+git config core.hooksPath hooks
+```
 
 ## GitHub-Workflows für Code-Qualität
 
@@ -68,7 +82,8 @@ Da für vollständige Funktionstests Abhängigkeiten wie DDEV, Docker/OrbStack u
 Wir verwenden [Bats](https://github.com/bats-core/bats-core) für Unit Tests:
 
 ```bash
-bats tests/unit/
+# Testmodus aktivieren, um Docker-Prüfungen zu überspringen
+DEV_TEST_MODE=true bats tests/test_dev.bats
 ```
 
 ### Voraussetzungen für lokale Tests
@@ -81,7 +96,7 @@ bats tests/unit/
 
 ### Hinzufügen neuer Tests
 
-Neue Unit Tests können in `tests/unit/` hinzugefügt werden. Bestehende Tests können als Vorlage dienen.
+Neue Unit Tests können in `tests/` hinzugefügt werden. Bestehende Tests können als Vorlage dienen.
 Jeder Test sollte eine spezifische Funktion überprüfen und möglichst unabhängig von anderen Tests sein.
 
 ## Test-Workflow für Entwickler
@@ -97,4 +112,19 @@ Jeder Test sollte eine spezifische Funktion überprüfen und möglichst unabhän
 - Alle neuen Funktionen sollten durch Unit Tests abgedeckt sein
 - Bugs sollten mit Tests reproduziert und die Behebung durch Tests bestätigt werden
 - Komplexe Logik sollte besonders gründlich getestet werden
-- Tests sollten die tatsächliche Nutzung der CLI simulieren 
+- Tests sollten die tatsächliche Nutzung der CLI simulieren
+
+## Manuelle Tests
+
+Du kannst die Tests auch manuell ausführen:
+
+```bash
+# Bash-Syntax prüfen
+bash -n src/dev
+
+# ShellCheck ausführen
+shellcheck src/dev
+
+# BATS-Tests ausführen (wenn vorhanden)
+DEV_TEST_MODE=true bats tests/test_dev.bats
+``` 
