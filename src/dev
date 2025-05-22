@@ -264,7 +264,8 @@ upgrade() {
     fi
     
     # Verify hash
-    local expected_hash=$(cat "$temp_hash")
+    local expected_hash
+    expected_hash=$(cat "$temp_hash")
     local actual_hash
     
     if command -v shasum >/dev/null 2>&1; then
