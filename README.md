@@ -241,22 +241,22 @@ Andre Witte
 - [x] Enhanced error handling
 - [ ] Project templates
 
-## Git Hooks für Entwickler
+## Git Hooks for Developers
 
-Um Formatierungsfehler und andere Probleme vor dem Commit und Push zu erkennen, kannst du die Git Hooks verwenden:
+To detect formatting errors and other issues before committing and pushing, you can use Git Hooks:
 
 ```bash
-# Kopiere die Hooks in dein .git-Verzeichnis
+# Copy the hooks to your .git directory
 cp hooks/pre-commit .git/hooks/
 cp hooks/pre-push .git/hooks/
 chmod +x .git/hooks/pre-commit .git/hooks/pre-push
 
-# Oder setze den Hooks-Pfad direkt (einfacher)
+# Or set the hooks path directly (easier)
 git config core.hooksPath hooks
 ```
 
-Die Hooks führen automatisch Prüfungen durch:
-- **pre-commit**: Versionskonsistenz, Syntax, Ausführbarkeit, Formatierung (Tabs, Zeilenlänge, etc.)
-- **pre-push**: ShellCheck und BATS-Tests (falls installiert)
+The hooks automatically perform checks:
+- **pre-commit**: Version consistency, syntax, executability, formatting (tabs, line length, etc.)
+- **pre-push**: ShellCheck and BATS tests (if installed)
 
-Details zur Testinfrastruktur und -strategie findest du in [TESTING.md](TESTING.md).
+Details on the test infrastructure and strategy can be found in [TESTING.md](TESTING.md).

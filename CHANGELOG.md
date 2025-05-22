@@ -16,21 +16,21 @@ All notable changes to the Development CLI Tools will be documented in this file
 ## [1.3.3] - 2024-05-28
 
 ### Added
-- Git Hooks für lokale Code-Qualitätsprüfungen hinzugefügt
-  - pre-commit Hook: Prüft Versionskonsistenz, Syntax, Ausführbarkeit und Formatierung
-  - pre-push Hook: Führt ShellCheck und BATS-Tests aus (wenn vorhanden)
-- Dokumentation zur Testinfrastruktur in TESTING.md hinzugefügt
-- Neuer Befehl `c` für direkte Ausführung von bin/console-Befehlen
+- Added Git Hooks for local code quality checks
+  - pre-commit hook: Checks version consistency, syntax, executability, and formatting
+  - pre-push hook: Runs ShellCheck and BATS tests (if available)
+- Added documentation on test infrastructure in TESTING.md
+- Added new command `c` for direct execution of bin/console commands
 
 ### Changed
-- Verbesserte Formatierung (Trailing Whitespaces entfernt)
-- Befehlsaufteilung umstrukturiert: `c` ist jetzt für Console-Befehle statt für Composer
-- Composer-Befehle verwenden jetzt `com` statt `c` als Alias
+- Improved formatting (removed trailing whitespaces)
+- Restructured command organization: `c` is now for Console commands instead of Composer
+- Composer commands now use `com` instead of `c` as alias
 
 ### Fixed
-- Trailing Whitespaces in der Hauptdatei entfernt
-- Debug-Ausgaben in das einheitliche Logging-System integriert
-- Fehler im SSH-Befehl behoben (fehlender Alias 's')
+- Removed trailing whitespaces in the main file
+- Integrated debug outputs into the unified logging system
+- Fixed SSH command error (missing alias 's')
 
 ## [1.3.2] - 2024-05-24
 
