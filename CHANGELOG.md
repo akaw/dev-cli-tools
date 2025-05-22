@@ -2,6 +2,17 @@
 
 All notable changes to the Development CLI Tools will be documented in this file.
 
+## [1.3.4] - 2024-05-29
+
+### Added
+- Added secure upgrade mechanism with SHA256 hash verification
+- Created hash verification for script updates to prevent tampering
+- Added support for both macOS and Linux hash verification utilities
+
+### Changed
+- Enhanced upgrade process with better error handling and file cleanup
+- Improved temporary file management during updates
+
 ## [1.3.3] - 2024-05-28
 
 ### Added
@@ -9,9 +20,12 @@ All notable changes to the Development CLI Tools will be documented in this file
   - pre-commit Hook: Prüft Versionskonsistenz, Syntax, Ausführbarkeit und Formatierung
   - pre-push Hook: Führt ShellCheck und BATS-Tests aus (wenn vorhanden)
 - Dokumentation zur Testinfrastruktur in TESTING.md hinzugefügt
+- Neuer Befehl `c` für direkte Ausführung von bin/console-Befehlen
 
 ### Changed
 - Verbesserte Formatierung (Trailing Whitespaces entfernt)
+- Befehlsaufteilung umstrukturiert: `c` ist jetzt für Console-Befehle statt für Composer
+- Composer-Befehle verwenden jetzt `com` statt `c` als Alias
 
 ### Fixed
 - Trailing Whitespaces in der Hauptdatei entfernt
