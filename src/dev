@@ -1766,6 +1766,12 @@ create_package_name() {
 
 # Function to check if a container is running and start it if necessary
 check_and_ensure_running_container() {
+    # Skip container checks in test mode
+    if [[ "${DEV_TEST_MODE:-}" == "true" ]]; then
+        debug "Test mode detected, skipping container status check"
+        return 0
+    fi
+    
     # First check if we're even in a valid project directory
     if [ ! -d ".ddev" ] || [ ! -f ".ddev/config.yaml" ]; then
         warn "This command requires a DDEV project, but none was found in the current directory."
