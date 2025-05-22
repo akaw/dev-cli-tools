@@ -50,7 +50,7 @@ jobs:
       - name: Prüfe Zeilenlänge
         run: |
           # Prüfe auf Zeilen länger als 120 Zeichen (ausgenommen Kommentare und Strings)
-          ! grep -v '^\s*#' src/dev | grep -v '"\|'\'' | grep -E '.{120,}'
+          ! grep -v '^\s*#' src/dev | grep -v "\"\\|'" | grep -E '.{120,}'
           
       - name: Prüfe Einrückung
         run: |
