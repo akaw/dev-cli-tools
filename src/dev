@@ -1773,63 +1773,63 @@ check_and_ensure_running_container() {
     local project_name
     project_name=$(grep "name:" .ddev/config.yaml | head -n1 | awk '{print $2}')
     debug "Found DDEV project: $project_name"
-
-    echo "DEBUG: Checking container status for project: $project_name"
-
+    
+    debug "Checking container status for project: $project_name"
+    
     # APPROACH 1: Try direct docker container check first (most reliable)
-    echo "DEBUG: Checking for running Docker container..."
+    debug "Checking for running Docker container..."
     local container_running=false
     if docker ps --format "{{.Names}}" 2>/dev/null | grep -q "ddev-${project_name}-web"; then
-        echo "DEBUG: FOUND RUNNING CONTAINER: Docker reports container 'ddev-${project_name}-web' is running"
+        debug "FOUND RUNNING CONTAINER: Docker reports container 'ddev-${project_name}-web' is running"
         container_running=true
     else
-        echo "DEBUG: Docker container check: No running container for project found"
+        debug "Docker container check: No running container for project found"
     fi
-
+    
     # APPROACH 2: Try ddev status JSON output as backup
     if [[ "$container_running" != "true" ]]; then
-        echo "DEBUG: Trying DDEV JSON status check as alternative..."
-
+        debug "Trying DDEV JSON status check as alternative..."
+        
         # Check if we can get JSON output from ddev
         local json_output
         if json_output=$(ddev describe --json-output 2>/dev/null); then
-            echo "DEBUG: Successfully got JSON output from DDEV"
-
+            debug "Successfully got JSON output from DDEV"
+            
             # If jq is available, use it for proper parsing
             if command -v jq >/dev/null 2>&1; then
                 local json_status
                 json_status=$(echo "$json_output" | jq -r '.[0].status' 2>/dev/null)
-                echo "DEBUG: JSON status: '$json_status'"
-
+                debug "JSON status: '$json_status'"
+                
                 if [[ "$json_status" == "running" || "$json_status" == "Running" ]]; then
-                    echo "DEBUG: JSON check confirms container is running (status: $json_status)"
+                    debug "JSON check confirms container is running (status: $json_status)"
                     container_running=true
                 fi
             else
                 # Fallback for systems without jq - crude grep for running status
-                if echo "$json_output" | grep -q '"status":"running"' ||
+                if echo "$json_output" | grep -q '"status":"running"' || 
                    echo "$json_output" | grep -q '"status":"Running"'; then
-                    echo "DEBUG: Simple JSON grep confirms container is running"
+                    debug "Simple JSON grep confirms container is running"
                     container_running=true
                 fi
             fi
         else
-            echo "DEBUG: Failed to get JSON output from DDEV"
+            debug "Failed to get JSON output from DDEV"
         fi
     fi
-
+    
     # Final decision based on our checks
     if [[ "$container_running" == "true" ]]; then
-        echo "DEBUG: FINAL DETERMINATION: Container IS running - no restart needed"
+        debug "FINAL DETERMINATION: Container IS running - no restart needed"
         return 0
     else
-        echo "DEBUG: FINAL DETERMINATION: Container is NOT running - will start it now"
-        echo "DEBUG: Starting the container..."
+        debug "FINAL DETERMINATION: Container is NOT running - will start it now"
+        debug "Starting the container..."
         if ! ddev start; then
             error "Failed to start DDEV project. Please check for errors and try again."
             return 1
         fi
-        echo "DEBUG: Container started successfully"
+        debug "Container started successfully"
         return 0
     fi
 }
