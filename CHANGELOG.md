@@ -16,6 +16,7 @@ All notable changes to the Development CLI Tools will be documented in this file
 ### Fixed
 - Trailing Whitespaces in der Hauptdatei entfernt
 - Debug-Ausgaben in das einheitliche Logging-System integriert
+- Fehler im SSH-Befehl behoben (fehlender Alias 's')
 
 ## [1.3.2] - 2024-05-24
 

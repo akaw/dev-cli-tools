@@ -907,7 +907,7 @@ parse_params() {
         [[ -n "$launchparam" ]] && shift
         ;;
 
-    ssh)
+    s | ssh)
         debug "Connecting via SSH..."
         ssh=1
         ;;
