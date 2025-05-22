@@ -2,6 +2,13 @@
 
 All notable changes to the Development CLI Tools will be documented in this file.
 
+## [1.2.6] - 2024-05-22
+
+### Fixed
+- Fixed container restart issue when running cache:clear command
+- Improved DDEV project checking to completely bypass ensure_ddev_project when container is already running
+- Added detailed debugging information to troubleshoot container status
+
 ## [1.2.5] - 2024-05-22
 
 ### Added

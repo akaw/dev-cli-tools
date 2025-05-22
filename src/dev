@@ -12,7 +12,7 @@
 # shellcheck disable=SC2034,SC2168,SC2317
 
 # Default Configuration
-VERSION="1.2.5"
+VERSION="1.2.6"
 DOCKER_ENVIRONMENT="${DOCKER_ENVIRONMENT:-orbstack}"
 BACKUP_DIR="${BACKUP_DIR:-.project/backups}"
 DB_EXPORT_FILE="${DB_EXPORT_FILE:-.project/db.sql.gz}"
@@ -1364,6 +1364,20 @@ execute_commands() {
         # Special handling for cache:clear command to avoid unnecessary restarts
         if [[ $consoleparam == "cache:clear" ]]; then
             debug "Running cache:clear command directly..."
+            debug "Container status was checked by check_ddev_project() before this"
+            
+            # Output current container state again for debugging
+            local project_name
+            project_name=$(grep "name:" .ddev/config.yaml | head -n1 | awk '{print $2}')
+            debug "Project name from config: $project_name"
+            
+            # Check if container is running directly
+            if docker ps | grep -q "ddev-${project_name}-web"; then
+                debug "VERIFIED: Container is already running (docker ps check)"
+            else
+                debug "WARNING: Container appears to not be running despite previous check!"
+            fi
+            
             local console_flags=""
             [[ $verbose == 1 ]] && console_flags+=" -v"
             
@@ -1816,12 +1830,39 @@ ensure_ddev_project() {
 
 # Eine Hilfsfunktion für die Fehlermeldung, um Code-Duplizierung zu vermeiden
 check_ddev_project() {
+    debug "Calling check_ddev_project..."
+    
+    # First check if we're even in a valid project directory
+    if [ ! -d ".ddev" ] || [ ! -f ".ddev/config.yaml" ]; then
+        warn "This command requires a DDEV project, but none was found in the current directory."
+        info "Please change to a directory with a DDEV project or create one with 'ddev config'."
+        info "Alternatively, you can create a new project (Symfony or Shopware) with 'dev new'."
+        return 1
+    fi
+    
+    # Get project name for debug output
+    local project_name
+    project_name=$(grep "name:" .ddev/config.yaml | head -n1 | awk '{print $2}')
+    debug "Project directory check: Valid DDEV project found with name: $project_name"
+    
+    # Now check container state with docker directly (bypass ensure_ddev_project)
+    if docker ps | grep -q "ddev-${project_name}-web"; then
+        debug "Container check: DDEV project $project_name is already running (docker check)"
+        
+        # If we're here, the container is running so return success
+        # This skips ensure_ddev_project completely but marks the project as valid and running
+        return 0
+    fi
+    
+    # If we're here, container isn't running, so call ensure_ddev_project to start it
+    debug "Container check: DDEV project $project_name is not running, calling ensure_ddev_project to start it..."
     if ! ensure_ddev_project; then
         warn "This command requires a DDEV project, but none was found in the current directory."
         info "Please change to a directory with a DDEV project or create one with 'ddev config'."
         info "Alternatively, you can create a new project (Symfony or Shopware) with 'dev new'."
         return 1
     fi
+    
     return 0
 }
 
