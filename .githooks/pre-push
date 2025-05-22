@@ -1,0 +1,77 @@
+#!/usr/bin/env bash
+
+# Farben für die Ausgabe
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+NC='\033[0m' # No Color
+
+echo -e "${YELLOW}Führe lokale Tests vor dem Push aus...${NC}"
+
+# ShellCheck
+echo -e "${YELLOW}Führe ShellCheck aus...${NC}"
+if ! command -v shellcheck &> /dev/null; then
+    echo -e "${RED}ShellCheck ist nicht installiert. Bitte installiere es mit 'brew install shellcheck'.${NC}"
+    exit 1
+fi
+
+if ! shellcheck src/dev; then
+    echo -e "${RED}ShellCheck hat Fehler gefunden. Bitte korrigiere sie, bevor du den Code pushst.${NC}"
+    exit 1
+fi
+
+echo -e "${GREEN}ShellCheck erfolgreich durchlaufen.${NC}"
+
+# BATS Tests
+echo -e "${YELLOW}Führe BATS Tests aus...${NC}"
+if ! command -v bats &> /dev/null; then
+    echo -e "${RED}BATS ist nicht installiert. Bitte installiere es mit 'brew install bats-core'.${NC}"
+    exit 1
+fi
+
+# Setze Test-Mode für die Funktionstests
+export DEV_TEST_MODE=true
+
+if ! bats tests/unit/*.bats; then
+    echo -e "${RED}BATS Tests sind fehlgeschlagen. Bitte korrigiere die Fehler, bevor du den Code pushst.${NC}"
+    exit 1
+fi
+
+echo -e "${GREEN}BATS Tests erfolgreich durchlaufen.${NC}"
+
+# Überprüfe die Versions-Konsistenz
+echo -e "${YELLOW}Überprüfe Versionskonsistenz...${NC}"
+README_VERSION=$(grep -o "version-[0-9.]*" README.md | head -1 | cut -d'-' -f2)
+SCRIPT_VERSION=$(grep "^VERSION=" src/dev | cut -d'"' -f2)
+
+echo "README Version: $README_VERSION"
+echo "Script Version: $SCRIPT_VERSION"
+
+if [ "$README_VERSION" != "$SCRIPT_VERSION" ]; then
+    echo -e "${RED}Versionen stimmen nicht überein! README: $README_VERSION, Script: $SCRIPT_VERSION${NC}"
+    exit 1
+else
+    echo -e "${GREEN}Versionskonsistenz: OK ($SCRIPT_VERSION)${NC}"
+fi
+
+# Bash Syntax Check
+echo -e "${YELLOW}Überprüfe Bash Syntax...${NC}"
+if ! bash -n src/dev; then
+    echo -e "${RED}Bash Syntax-Check fehlgeschlagen. Bitte korrigiere die Fehler, bevor du den Code pushst.${NC}"
+    exit 1
+fi
+
+echo -e "${GREEN}Bash Syntax-Check: OK${NC}"
+
+# Überprüfe, ob das Skript ausführbar ist
+echo -e "${YELLOW}Überprüfe, ob das Skript ausführbar ist...${NC}"
+if [ ! -x src/dev ]; then
+    echo -e "${RED}Das Skript src/dev ist nicht ausführbar. Bitte führe 'chmod +x src/dev' aus.${NC}"
+    exit 1
+fi
+
+echo -e "${GREEN}Ausführbarkeits-Check: OK${NC}"
+
+echo -e "${GREEN}Alle lokalen Tests erfolgreich durchlaufen. Der Push wird fortgesetzt.${NC}"
+
+exit 0 

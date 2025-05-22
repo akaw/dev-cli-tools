@@ -8,9 +8,12 @@ All notable changes to the Development CLI Tools will be documented in this file
 - Added GitHub Actions workflow for automated code quality checks
 - Added comprehensive TESTING.md documentation for testing strategy
 - Implemented ShellCheck, syntax check, and formatting verification in CI
+- Added Git Hooks for pre-commit and pre-push to enforce tests locally
+- Implemented automated version consistency checks in Git Hooks
 
 ### Changed
 - Improved testing approach with separate CI quality checks and local functional tests
+- Enhanced developer workflow with automatic checks before commits and pushes
 
 ## [1.3.1] - 2024-05-24
 
