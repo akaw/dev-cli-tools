@@ -6,13 +6,13 @@
 #
 # Description: dDEV shortening tools
 # Usage: dev [OPTIONS] [PARAMETERS]
-# Version: 1.3.7
+# Version: 1.3.4
 # https://github.com/akaw/dev-cli-tools/
 #
 # shellcheck disable=SC2034,SC2168,SC2317
 
 # Default Configuration
-VERSION="1.3.7"
+VERSION="1.3.4"
 DOCKER_ENVIRONMENT="${DOCKER_ENVIRONMENT:-orbstack}"
 BACKUP_DIR="${BACKUP_DIR:-.project/backups}"
 DB_EXPORT_FILE="${DB_EXPORT_FILE:-.project/db.sql.gz}"
@@ -21,7 +21,7 @@ DEFAULT_NODE_VERSION="${DEFAULT_NODE_VERSION:-20}"
 DEFAULT_MYSQL_VERSION="${DEFAULT_MYSQL_VERSION:-8.0}"
 LOG_FILE="${LOG_FILE:-dev.log}"
 PREFERRED_EDITOR="${PREFERRED_EDITOR:-}"  # Empty default means no editor will be launched
-CONFIG_FILE="${CONFIG_FILE:-$HOME/.config/.dev-cli-tools.conf}"
+CONFIG_FILE="${CONFIG_FILE:-$HOME/.dev-cli-tools.conf}"
 
 OS=$(uname -s)
 

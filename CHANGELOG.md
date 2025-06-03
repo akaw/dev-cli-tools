@@ -2,6 +2,41 @@
 
 All notable changes to the Development CLI Tools will be documented in this file.
 
+## [1.3.7] - 2024-12-29
+
+### Fixed
+- Fixed malformed `unset` command that caused "update: command not found" error
+- Added proper line continuation backslashes to multi-line unset statemen
+
+### Note
+This is another hotfix release addressing issues discovered during real-world usage.
+
+## [1.3.6] - 2024-12-29
+
+### Fixed
+- Fixed additional typo in default() function: ensure_ddev_projec → ensure_ddev_projec
+
+### Note
+This is a hotfix release that addresses an additional typo discovered immediately after v1.3.5.
+
+## [1.3.5] - 2024-12-29
+
+### Fixed
+- Fixed critical typo in default() function call that prevented script execution
+- Fixed function name: ensure_docker_environmen → ensure_docker_environment (27 instances)
+- Fixed command typo: orbstack star → orbstack star
+- Fixed bash command: shif → shift (19 instances)
+- Fixed ddev commands: star → start, restar → restart (4 instances)
+- Fixed variable name: json_outpu → json_outpu
+
+### Added
+- Added comprehensive pre-release check script to validate version consistency
+- Added tests/pre-release-check.sh for automated release validation
+
+### Impac
+This release fixes critical issues that prevented the script from running properly.
+All users should update immediately as the previous version was non-functional.
+
 ## [1.3.4] - 2024-05-29
 
 ### Added
