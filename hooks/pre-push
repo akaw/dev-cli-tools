@@ -20,14 +20,14 @@ else
 fi
 
 # Führe BATS-Tests aus (wenn vorhanden)
-if [ -d "tests" ] && [ -f "tests/test_dev.bats" ]; then
+if [ -d "tests" ] && [ -f "tests/unit/basic.bats" ]; then
   if command -v bats &>/dev/null; then
     echo "✓ Führe BATS-Tests aus..."
 
     # Setze Testmodus, um Docker-Prüfungen zu überspringen
     export DEV_TEST_MODE=true
 
-    bats tests/test_dev.bats || {
+    bats tests/unit/basic.bats || {
       echo "❌ BATS-Tests fehlgeschlagen!"
       unset DEV_TEST_MODE
       exit 1
