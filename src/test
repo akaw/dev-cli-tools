@@ -458,7 +458,7 @@ start_service() {
 }
 
 # Function to start Docker environment only if needed
-ensure_docker_environment() {
+ensure_docker_environmentt() {
     # Skip docker checks in test mode
     if [[ "${DEV_TEST_MODE:-}" == "true" ]]; then
         debug "Test mode detected, skipping Docker environment check"
