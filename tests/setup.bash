@@ -35,5 +35,17 @@ export DEV_TEST_MODE="true"
 
 # Helper to run the dev script with specific parameters
 run_dev() {
+    # Ensure script exists and is executable
+    if [[ ! -f "${DEV_SCRIPT}" ]]; then
+        echo "Error: Dev script not found at ${DEV_SCRIPT}" >&2
+        return 127
+    fi
+
+    if [[ ! -x "${DEV_SCRIPT}" ]]; then
+        echo "Error: Dev script is not executable at ${DEV_SCRIPT}" >&2
+        return 126
+    fi
+
+    # Run the script with all arguments
     "${DEV_SCRIPT}" "$@"
 }
