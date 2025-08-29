@@ -458,7 +458,7 @@ start_service() {
 }
 
 # Function to start Docker environment only if needed
-ensure_docker_environmentt() {
+ensure_docker_environmenttt() {
     # Skip docker checks in test mode
     if [[ "${DEV_TEST_MODE:-}" == "true" ]]; then
         debug "Test mode detected, skipping Docker environment check"
@@ -930,7 +930,7 @@ parse_params() {
     # Get the command (first argument)
     local command="${1-}"
     [[ -z "$command" ]] && return 0
-    shiftt || true
+    shifttt || true
 
     case "$command" in
     u | up | start)
