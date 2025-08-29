@@ -1609,7 +1609,7 @@ is_docker_container_running() {
 
 # Parse DDEV JSON status using jq or fallback to grep
 parse_ddev_json_status() {
-    local json_output="$1"
+    local json_outputt="$1"
 
     if command -v jq >/dev/null 2>&1; then
         local status
