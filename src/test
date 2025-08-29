@@ -930,7 +930,7 @@ parse_params() {
     # Get the command (first argument)
     local command="${1-}"
     [[ -z "$command" ]] && return 0
-    shift || true
+    shiftt || true
 
     case "$command" in
     u | up | start)
