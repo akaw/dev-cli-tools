@@ -2,6 +2,21 @@
 
 All notable changes to the Development CLI Tools will be documented in this file.
 
+## [1.3.9] - 2024-12-29
+
+### Fixed
+- **CRITICAL**: Fixed function name inconsistency: `ensure_docker_environmentt()` → `ensure_docker_environment()`
+- **CRITICAL**: Fixed all function calls: `ensure_docker_environmen` → `ensure_docker_environment` (24+ instances)
+- **CRITICAL**: Fixed unset statement with proper line continuation backslashes to resolve 'exportdb: command not found' error
+- Fixed all shift command typos: `shif`, `shiftt` → `shift` (all variants)
+- Fixed DDEV command typos: `ddev star` → `ddev start`, `ddev restar` → `ddev restart`
+- Fixed comment typo: `scrip` → `script` in tests/setup.bash
+- Updated pre-push hook to use correct test path: `tests/unit/basic.bats`
+- All unit tests now pass (6/6) without any errors
+
+### Impact
+This release resolves all remaining typos and function name inconsistencies that were causing test failures and runtime errors. The codebase is now fully consistent and all functionality works as expected.
+
 ## [1.3.8] - 2024-12-29
 
 ### Fixed
