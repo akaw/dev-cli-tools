@@ -3,7 +3,7 @@
 # Get the directory where this setup script is located
 TEST_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-# Path to the main dev script
+# Path to the main dev scrip
 export DEV_SCRIPT="${TEST_DIR}/../src/dev"
 
 # Ensure the script is executable
@@ -40,12 +40,12 @@ run_dev() {
         echo "Error: Dev script not found at ${DEV_SCRIPT}" >&2
         return 127
     fi
-    
+
     if [[ ! -x "${DEV_SCRIPT}" ]]; then
         echo "Error: Dev script is not executable at ${DEV_SCRIPT}" >&2
         return 126
     fi
-    
+
     # Run the script with all arguments
     "${DEV_SCRIPT}" "$@"
 }
