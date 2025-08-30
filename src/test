@@ -209,7 +209,7 @@ msg() {
 # Default function to start the development environmen
 # This function is called when no arguments are provided
 default() {
-    ensure_docker_environmen
+    ensure_docker_environment
     # Check if DDEV project exists and start i
     if ddev describe >/dev/null 2>&1; then
         ensure_ddev_projec
@@ -458,7 +458,7 @@ start_service() {
 }
 
 # Function to start Docker environment only if needed
-ensure_docker_environmenttt() {
+ensure_docker_environmentttt() {
     # Skip docker checks in test mode
     if [[ "${DEV_TEST_MODE:-}" == "true" ]]; then
         debug "Test mode detected, skipping Docker environment check"
@@ -930,7 +930,7 @@ parse_params() {
     # Get the command (first argument)
     local command="${1-}"
     [[ -z "$command" ]] && return 0
-    shifttt || true
+    shiftttt || true
 
     case "$command" in
     u | up | start)
@@ -957,7 +957,7 @@ parse_params() {
         debug "Opening in browser..."
         launch=1
         launchparam="${1-}"
-        [[ -n "$launchparam" ]] && shif
+        [[ -n "$launchparam" ]] && shift
         ;;
 
     s | ssh)
@@ -970,14 +970,14 @@ parse_params() {
         debug "Exporting database..."
         exportdb=1
         exportdbparam="${1-.project/db.sql.gz}"
-        [[ -n "$exportdbparam" ]] && shif
+        [[ -n "$exportdbparam" ]] && shift
         ;;
 
     i | import)
         debug "Importing database..."
         importdb=1
         importdbparam="${1-.project/db.sql.gz}"
-        [[ -n "$importdbparam" ]] && shif
+        [[ -n "$importdbparam" ]] && shift
         ;;
 
     se | seq | sequelace)
@@ -989,7 +989,7 @@ parse_params() {
         debug "Running database migrations..."
         console=1
         consoleparam="database:migrate ${1-}"
-        [[ -n "${1-}" ]] && shif
+        [[ -n "${1-}" ]] && shift
         ;;
 
     damiall | da:mi:all | database:migrate:all)
@@ -1003,14 +1003,14 @@ parse_params() {
         debug "Toggling xdebug..."
         xdebug=1
         xdebugparam="${1-on}"
-        [[ -n "${1-}" ]] && shif
+        [[ -n "${1-}" ]] && shift
         ;;
 
     t | test)
         debug "Running tests..."
         test=1
         testparam="${1-}"
-        [[ -n "$testparam" ]] && shif
+        [[ -n "$testparam" ]] && shift
         ;;
 
     l | logs)
@@ -1034,7 +1034,7 @@ parse_params() {
         debug "Running composer command..."
         composer=1
         composerparam="${1-}"
-        [[ -n "$composerparam" ]] && shif
+        [[ -n "$composerparam" ]] && shift
         ;;
 
     cup | update)
@@ -1053,14 +1053,14 @@ parse_params() {
         debug "Adding package..."
         require=1
         requireparam="${1-}"
-        [[ -n "$requireparam" ]] && shif
+        [[ -n "$requireparam" ]] && shift
         ;;
 
     crm | remove)
         debug "Removing package..."
         remove=1
         removeparam="${1-}"
-        [[ -n "$removeparam" ]] && shif
+        [[ -n "$removeparam" ]] && shift
         ;;
 
     ca | cda | dump-autoload)
@@ -1073,7 +1073,7 @@ parse_params() {
         debug "Setting prefer-source..."
         prefersource=1
         prefersourceparam="${1-}"
-        [[ -n "$prefersourceparam" ]] && shif
+        [[ -n "$prefersourceparam" ]] && shift
         ;;
 
     # bin/Console commands
@@ -1081,7 +1081,7 @@ parse_params() {
         debug "Running console command..."
         console=1
         consoleparam="${1-}"
-        [[ -n "$consoleparam" ]] && shif
+        [[ -n "$consoleparam" ]] && shift
         ;;
 
     cd | cade | ca:de | cache:delete)
@@ -1100,7 +1100,7 @@ parse_params() {
         debug "Building components..."
         build=1
         buildparam="${1-}"
-        [[ -n "$buildparam" ]] && shif
+        [[ -n "$buildparam" ]] && shift
         ;;
 
     ba | build:administration)
@@ -1125,7 +1125,7 @@ parse_params() {
         debug "Watching components..."
         watch=1
         watchparam="${1-}"
-        [[ -n "$watchparam" ]] && shif
+        [[ -n "$watchparam" ]] && shift
         ;;
 
     wa | wa:ad | watch:administration)
@@ -1163,35 +1163,35 @@ parse_params() {
         debug "Activating plugin..."
         console=1
         consoleparam="plugin:activate ${1-}"
-        [[ -n "${1-}" ]] && shif
+        [[ -n "${1-}" ]] && shift
         ;;
 
     plin | pl:in | plugin:install)
         debug "Installing plugin..."
         console=1
         consoleparam="plugin:install ${1-}"
-        [[ -n "${1-}" ]] && shif
+        [[ -n "${1-}" ]] && shift
         ;;
 
     plun | pl:un | plugin:uninstall)
         debug "Uninstalling plugin..."
         console=1
         consoleparam="plugin:uninstall ${1-}"
-        [[ -n "${1-}" ]] && shif
+        [[ -n "${1-}" ]] && shift
         ;;
 
     pu | plup | pl:up | plugin:update)
         debug "Updating plugin..."
         console=1
         consoleparam="plugin:update ${1-}"
-        [[ -n "${1-}" ]] && shif
+        [[ -n "${1-}" ]] && shift
         ;;
 
     plde | pl:de | plugin:deactivate)
         debug "Deactivating plugin..."
         console=1
         consoleparam="plugin:deactivate ${1-}"
-        [[ -n "${1-}" ]] && shif
+        [[ -n "${1-}" ]] && shift
         ;;
 
     # Project commands
@@ -1202,7 +1202,7 @@ parse_params() {
         if [[ -z "$newparam" ]]; then
             read -r -p "Project type (symfony|shopware): " newparam
         else
-            shif
+            shift
         fi
 
         # Normalize project type
@@ -1233,7 +1233,7 @@ parse_params() {
         debug "Restoring from backup..."
         restore=1
         restoreparam="${1-}"
-        [[ -n "$restoreparam" ]] && shif
+        [[ -n "$restoreparam" ]] && shift
         ;;
 
     upgrade)
@@ -1335,15 +1335,15 @@ main() {
         case "${1-}" in
         --no-color)
             NO_COLOR=1
-            shif
+            shift
             ;;
         --no-deprecations)
             no_deprecations=1
-            shif
+            shift
             ;;
         -vv | --verbose)
             verbose=1
-            shif
+            shift
             ;;
         -v | --version)
             version
@@ -1405,7 +1405,7 @@ execute_commands() {
     # Execute console commands
     if [[ $console == 1 ]]; then
         # Only verify Docker when actually needed
-        ensure_docker_environmen
+        ensure_docker_environment
 
         # Use the new helper function
         if ! check_and_ensure_running_container; then
@@ -1452,7 +1452,7 @@ execute_commands() {
 
     # Run composer commands
     if [[ $composer == 1 ]]; then
-        ensure_docker_environmen
+        ensure_docker_environment
 
         # Use the new helper function
         if ! check_and_ensure_running_container; then
@@ -1465,7 +1465,7 @@ execute_commands() {
 
     # Handle package requirements
     if [[ $require == 1 ]]; then
-        ensure_docker_environmen
+        ensure_docker_environment
 
         # Use our optimized container check function
         if ! check_and_ensure_running_container; then
@@ -1482,7 +1482,7 @@ execute_commands() {
 
     # Handle package removal
     if [[ $remove == 1 ]]; then
-        ensure_docker_environmen
+        ensure_docker_environment
 
         # Use our optimized container check function
         if ! check_and_ensure_running_container; then
@@ -1495,7 +1495,7 @@ execute_commands() {
 
     # Build shopware components
     if [[ $build == 1 ]]; then
-        ensure_docker_environmen
+        ensure_docker_environment
 
         # Use our optimized container check function
         if ! check_and_ensure_running_container; then
@@ -1521,7 +1521,7 @@ execute_commands() {
 
     # Watch components
     if [[ $watch == 1 ]]; then
-        ensure_docker_environmen
+        ensure_docker_environment
 
         # Use our optimized container check function
         if ! check_and_ensure_running_container; then
@@ -1544,7 +1544,7 @@ execute_commands() {
 
     # Database operations
     if [[ $exportdb == 1 ]]; then
-        ensure_docker_environmen
+        ensure_docker_environment
 
         # Use our optimized container check function
         if ! check_and_ensure_running_container; then
@@ -1556,7 +1556,7 @@ execute_commands() {
     fi
 
     if [[ $importdb == 1 ]]; then
-        ensure_docker_environmen
+        ensure_docker_environment
 
         # Use our optimized container check function
         if ! check_and_ensure_running_container; then
@@ -1570,34 +1570,34 @@ execute_commands() {
 
     # Project operations
     if [[ $start == 1 ]]; then
-        ensure_docker_environmen
+        ensure_docker_environment
         debug "Starting project..."
-        ddev star
+        ddev start
         ddev describe
     fi
 
     if [[ $down == 1 ]]; then
-        ensure_docker_environmen
+        ensure_docker_environment
         debug "Stopping project..."
         ddev stop
     fi
 
     if [[ $restart == 1 ]]; then
-        ensure_docker_environmen
+        ensure_docker_environment
         debug "Restarting project..."
-        ddev restar
+        ddev restart
         ddev describe
     fi
 
     if [[ $status == 1 ]]; then
-        ensure_docker_environmen
+        ensure_docker_environment
         debug "Showing project status..."
         ddev describe
     fi
 
     # Direct command execution
     if [[ $ssh == 1 ]]; then
-        ensure_docker_environmen
+        ensure_docker_environment
 
         # Use our optimized container check function
         if ! check_and_ensure_running_container; then
@@ -1609,7 +1609,7 @@ execute_commands() {
     fi
 
     if [[ $sequelace == 1 ]]; then
-        ensure_docker_environmen
+        ensure_docker_environment
 
         # Use our optimized container check function
         if ! check_and_ensure_running_container; then
@@ -1621,7 +1621,7 @@ execute_commands() {
     fi
 
     if [[ $launch == 1 ]]; then
-        ensure_docker_environmen
+        ensure_docker_environment
 
         # Use our optimized container check function
         if ! check_and_ensure_running_container; then
@@ -1639,7 +1639,7 @@ execute_commands() {
 
     # Cache operations
     if [[ $deletecache == 1 ]]; then
-        ensure_docker_environmen
+        ensure_docker_environment
 
         # Use our optimized container check function
         if ! check_and_ensure_running_container; then
@@ -1653,7 +1653,7 @@ execute_commands() {
 
     # Testing
     if [[ $test == 1 ]]; then
-        ensure_docker_environmen
+        ensure_docker_environment
 
         # Use our optimized container check function
         if ! check_and_ensure_running_container; then
@@ -1666,7 +1666,7 @@ execute_commands() {
 
     # Initialize projec
     if [[ $init == 1 ]]; then
-        ensure_docker_environmen
+        ensure_docker_environment
         debug "Initializing project..."
         read -r -p "Initialize DEV Environment? This will overwrite db and .env.local (y/n)?" choice
         case "$choice" in
@@ -1675,7 +1675,7 @@ execute_commands() {
             check_file_exists ".project/init.sql.gz"
             check_file_exists ".project/env.ddev"
             ddev exec cp .env.ddev .env.local
-            ddev star
+            ddev start
             ddev import-db -f .project/init.sql.gz
             ddev describe
             ;;
@@ -1687,7 +1687,7 @@ execute_commands() {
 
     # Backup and restore
     if [[ $backup == 1 ]]; then
-        ensure_docker_environmen
+        ensure_docker_environment
 
         # Use our optimized container check function
         if ! check_and_ensure_running_container; then
@@ -1703,7 +1703,7 @@ execute_commands() {
     fi
 
     if [[ $restore == 1 ]]; then
-        ensure_docker_environmen
+        ensure_docker_environment
 
         # Use our optimized container check function
         if ! check_and_ensure_running_container; then
@@ -1718,7 +1718,7 @@ execute_commands() {
 
     # Mail server
     if [[ $mail == 1 ]]; then
-        ensure_docker_environmen
+        ensure_docker_environment
 
         # Use our optimized container check function
         if ! check_and_ensure_running_container; then
@@ -1731,7 +1731,7 @@ execute_commands() {
 
     # Package handling
     if [[ $packages == 1 ]]; then
-        ensure_docker_environmen
+        ensure_docker_environment
 
         # Use our optimized container check function
         if ! check_and_ensure_running_container; then
@@ -1744,7 +1744,7 @@ execute_commands() {
 
     # New project creation
     if [[ $new == 1 ]]; then
-        ensure_docker_environmen
+        ensure_docker_environment
         debug "Creating new project of type: $newparam"
         # Rest of new project creation code
     fi

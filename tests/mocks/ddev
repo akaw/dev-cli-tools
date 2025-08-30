@@ -48,7 +48,7 @@ case "$1" in
         ;;
     "exec")
         # Handle various exec commands
-        shif
+        shift
         case "$1" in
             "composer")
                 echo "Running composer ${*:2}..."
