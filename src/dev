@@ -34,6 +34,11 @@ SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd -P)
 # Log level
 log_level=1
 
+# Performance optimization: Container status cache
+declare -A CONTAINER_STATUS_CACHE
+declare -A PROJECT_NAME_CACHE
+CACHE_TTL=30  # Cache TTL in seconds
+
 # Logging configuration
 LOG_FILE="${SCRIPT_DIR}/${LOG_FILE}"
 LOG_LEVEL="${LOG_LEVEL:-INFO}" # Use LOG_LEVEL from environment or set to INFO
@@ -191,6 +196,91 @@ cleanup() {
     if [ -n "${TEMP_DIR-}" ] && [ -d "$TEMP_DIR" ]; then
         rm -rf "$TEMP_DIR"
     fi
+    # Clear performance caches
+    unset CONTAINER_STATUS_CACHE
+    unset PROJECT_NAME_CACHE
+}
+
+# Performance optimization: Cache management functions
+get_current_timestamp() {
+    date +%s
+}
+
+is_cache_valid() {
+    local cache_key="$1"
+    local current_time
+    current_time=$(get_current_timestamp)
+    
+    if [[ -n "${CONTAINER_STATUS_CACHE[$cache_key]:-}" ]]; then
+        local cached_data="${CONTAINER_STATUS_CACHE[$cache_key]}"
+        local cached_time="${cached_data##*:}"
+        local age=$((current_time - cached_time))
+        
+        if [[ $age -lt $CACHE_TTL ]]; then
+            debug "Cache hit for $cache_key (age: ${age}s)"
+            return 0
+        else
+            debug "Cache expired for $cache_key (age: ${age}s)"
+            unset CONTAINER_STATUS_CACHE["$cache_key"]
+        fi
+    fi
+    return 1
+}
+
+cache_container_status() {
+    local project_name="$1"
+    local status="$2"
+    local timestamp
+    timestamp=$(get_current_timestamp)
+    
+    CONTAINER_STATUS_CACHE["$project_name"]="${status}:${timestamp}"
+    debug "Cached status for $project_name: $status"
+}
+
+get_cached_container_status() {
+    local project_name="$1"
+    if is_cache_valid "$project_name"; then
+        local cached_data="${CONTAINER_STATUS_CACHE[$project_name]}"
+        echo "${cached_data%%:*}"  # Return status part before ':'
+        return 0
+    fi
+    return 1
+}
+
+# Performance monitoring function
+show_cache_stats() {
+    if [[ "${LOG_LEVEL:-}" == "DEBUG" ]]; then
+        local cache_count=${#CONTAINER_STATUS_CACHE[@]}
+        local project_cache_count=${#PROJECT_NAME_CACHE[@]}
+        debug "Cache statistics: Container status entries: $cache_count, Project name entries: $project_cache_count"
+        
+        if [[ $cache_count -gt 0 ]]; then
+            for key in "${!CONTAINER_STATUS_CACHE[@]}"; do
+                local cached_data="${CONTAINER_STATUS_CACHE[$key]}"
+                local status="${cached_data%%:*}"
+                local timestamp="${cached_data##*:}"
+                local age=$(($(get_current_timestamp) - timestamp))
+                debug "  $key: $status (age: ${age}s)"
+            done
+        fi
+    fi
+}
+
+# Clear expired cache entries
+cleanup_expired_cache() {
+    local current_time
+    current_time=$(get_current_timestamp)
+    
+    for key in "${!CONTAINER_STATUS_CACHE[@]}"; do
+        local cached_data="${CONTAINER_STATUS_CACHE[$key]}"
+        local cached_time="${cached_data##*:}"
+        local age=$((current_time - cached_time))
+        
+        if [[ $age -ge $CACHE_TTL ]]; then
+            debug "Removing expired cache entry: $key (age: ${age}s)"
+            unset CONTAINER_STATUS_CACHE["$key"]
+        fi
+    done
 }
 
 # Simplified color outpu
@@ -212,7 +302,7 @@ default() {
     ensure_docker_environment
     # Check if DDEV project exists and start i
     if ddev describe >/dev/null 2>&1; then
-        ensure_ddev_projec
+        ensure_ddev_project
         ddev describe
         ddev sequelace
         ddev launch
@@ -1143,13 +1233,17 @@ main() {
 
     # No arguments provided
     if [ $# -eq 0 ]; then
-        defaul
+        default
         exit 0
     fi
 
     # Parse and execute commands
     parse_params "$@"
     execute_commands
+    
+    # Performance monitoring and cleanup
+    show_cache_stats
+    cleanup_expired_cache
 
     exit 0
 }
@@ -1158,264 +1252,81 @@ main() {
 execute_commands() {
     # Execute console commands
     if [[ $console == 1 ]]; then
-        # Only verify Docker when actually needed
-        ensure_docker_environment
-
-        # Use the new helper function
-        if ! check_and_ensure_running_container; then
-            return 1
-        fi
-
-        # Special handling for cache:clear command to avoid unnecessary restarts
-        if [[ $consoleparam == "cache:clear" ]]; then
-            debug "Running cache:clear command directly..."
-
-            local console_flags=""
-            [[ $verbose == 1 ]] && console_flags+=" -v"
-
-            # Add deprecation handling for Shopware console commands via environment variable
-            if [[ -f "bin/console" && -d "vendor/shopware" ]]; then
-                debug "Automatically suppressing deprecation warnings for Shopware via SYMFONY_DEPRECATIONS_HELPER"
-                ddev exec SYMFONY_DEPRECATIONS_HELPER=weak bin/console cache:clear "$console_flags"
-            else
-                ddev exec bin/console cache:clear "$console_flags"
-            fi
-            return 0
-        fi
-
-        debug "Executing console command: $consoleparam"
-        local console_flags=""
-        local env_vars=""
-
-        # Add deprecation handling for Shopware console commands via environment variable
-        if [[ -f "bin/console" && -d "vendor/shopware" ]]; then
-            env_vars="SYMFONY_DEPRECATIONS_HELPER=weak"
-            debug "Automatically suppressing deprecation warnings for Shopware via SYMFONY_DEPRECATIONS_HELPER"
-        fi
-
-        # Still respect explicit flag if set, but use it only for logging purposes
-        [[ $no_deprecations == 1 ]] && debug "Deprecation warnings suppressed via user flag"
-        [[ $verbose == 1 ]] && console_flags+=" -v"
-
-        if [[ -n "$env_vars" ]]; then
-            ddev exec "$env_vars" bin/console "$console_flags" "$consoleparam"
-        else
-            ddev exec bin/console "$console_flags" "$consoleparam"
-        fi
+        execute_with_container "console command" _execute_console_command
     fi
 
     # Run composer commands
     if [[ $composer == 1 ]]; then
-        ensure_docker_environment
-
-        # Use the new helper function
-        if ! check_and_ensure_running_container; then
-            return 1
-        fi
-
-        debug "Running composer command: $composerparam"
-        ddev composer "$composerparam"
+        execute_with_container "composer command" _execute_composer_command
     fi
 
     # Handle package requirements
     if [[ $require == 1 ]]; then
-        ensure_docker_environment
-
-        # Use our optimized container check function
-        if ! check_and_ensure_running_container; then
-            return 1
-        fi
-
-        debug "Adding package: $requireparam"
-        if [[ $prefersource == 1 ]]; then
-            ddev composer require "$requireparam" --prefer-source
-        else
-            ddev composer require "$requireparam"
-        fi
+        execute_with_container "package require" _execute_require_command
     fi
 
     # Handle package removal
     if [[ $remove == 1 ]]; then
-        ensure_docker_environment
-
-        # Use our optimized container check function
-        if ! check_and_ensure_running_container; then
-            return 1
-        fi
-
-        debug "Removing package: $removeparam"
-        ddev composer remove "$removeparam"
+        execute_with_container "package remove" _execute_remove_command
     fi
 
     # Build shopware components
     if [[ $build == 1 ]]; then
-        ensure_docker_environment
-
-        # Use our optimized container check function
-        if ! check_and_ensure_running_container; then
-            return 1
-        fi
-
-        debug "Building components: $buildparam"
-        case "$buildparam" in
-        "storefront" | "store" | "s")
-            ddev exec bin/build-storefront.sh
-            ;;
-        "administration" | "admin" | "a")
-            ddev exec bin/build-administration.sh
-            ;;
-        "js" | "javascript" | "j")
-            ddev exec bin/build-js.sh
-            ;;
-        *)
-            warn "Unknown build component: $buildparam"
-            ;;
-        esac
+        execute_with_container "build components" _execute_build_command
     fi
 
     # Watch components
     if [[ $watch == 1 ]]; then
-        ensure_docker_environment
-
-        # Use our optimized container check function
-        if ! check_and_ensure_running_container; then
-            return 1
-        fi
-
-        debug "Watching components: $watchparam"
-        case "$watchparam" in
-        "storefront" | "store" | "s")
-            ddev exec bin/watch-storefront.sh
-            ;;
-        "administration" | "admin" | "a")
-            ddev exec bin/watch-administration.sh
-            ;;
-        *)
-            warn "Unknown watch component: $watchparam"
-            ;;
-        esac
+        execute_with_container "watch components" _execute_watch_command
     fi
 
     # Database operations
     if [[ $exportdb == 1 ]]; then
-        ensure_docker_environment
-
-        # Use our optimized container check function
-        if ! check_and_ensure_running_container; then
-            return 1
-        fi
-
-        debug "Exporting database to: $exportdbparam"
-        ddev export-db -f "$exportdbparam"
+        execute_with_container "database export" _execute_export_command
     fi
 
     if [[ $importdb == 1 ]]; then
-        ensure_docker_environment
-
-        # Use our optimized container check function
-        if ! check_and_ensure_running_container; then
-            return 1
-        fi
-
-        debug "Importing database from: $importdbparam"
-        check_file_exists "$importdbparam"
-        ddev import-db -f "$importdbparam"
+        execute_with_container "database import" _execute_import_command
     fi
 
     # Project operations
     if [[ $start == 1 ]]; then
-        ensure_docker_environment
-        debug "Starting project..."
-        ddev start
-        ddev describe
+        execute_with_docker "start project" _execute_start_command
     fi
 
     if [[ $down == 1 ]]; then
-        ensure_docker_environment
-        debug "Stopping project..."
-        ddev stop
+        execute_with_docker "stop project" _execute_stop_command
     fi
 
     if [[ $restart == 1 ]]; then
-        ensure_docker_environment
-        debug "Restarting project..."
-        ddev restart
-        ddev describe
+        execute_with_docker "restart project" _execute_restart_command
     fi
 
     if [[ $status == 1 ]]; then
-        ensure_docker_environment
-        debug "Showing project status..."
-        ddev describe
+        execute_with_docker "project status" _execute_status_command
     fi
 
     # Direct command execution
     if [[ $ssh == 1 ]]; then
-        ensure_docker_environment
-
-        # Use our optimized container check function
-        if ! check_and_ensure_running_container; then
-            return 1
-        fi
-
-        debug "Opening SSH connection..."
-        ddev ssh
+        execute_with_container "SSH connection" _execute_ssh_command
     fi
 
     if [[ $sequelace == 1 ]]; then
-        ensure_docker_environment
-
-        # Use our optimized container check function
-        if ! check_and_ensure_running_container; then
-            return 1
-        fi
-
-        debug "Starting Sequel Ace..."
-        ddev sequelace
+        execute_with_container "Sequel Ace" _execute_sequelace_command
     fi
 
     if [[ $launch == 1 ]]; then
-        ensure_docker_environment
-
-        # Use our optimized container check function
-        if ! check_and_ensure_running_container; then
-            return 1
-        fi
-
-        if [[ -n "$launchparam" ]]; then
-            debug "Opening specific URL: $launchparam"
-            ddev launch "$launchparam"
-        else
-            debug "Opening default project URL..."
-            ddev launch
-        fi
+        execute_with_container "launch browser" _execute_launch_command
     fi
 
     # Cache operations
     if [[ $deletecache == 1 ]]; then
-        ensure_docker_environment
-
-        # Use our optimized container check function
-        if ! check_and_ensure_running_container; then
-            return 1
-        fi
-
-        debug "Deleting cache files..."
-        ddev exec rm -rf var/cache/dev*
-        ddev exec rm -rf var/cache/prod*
+        execute_with_container "delete cache" _execute_delete_cache_command
     fi
 
     # Testing
     if [[ $test == 1 ]]; then
-        ensure_docker_environment
-
-        # Use our optimized container check function
-        if ! check_and_ensure_running_container; then
-            return 1
-        fi
-
-        debug "Running tests: ${testparam-}"
-        ddev exec php bin/phpunit "${testparam-}"
+        execute_with_container "run tests" _execute_test_command
     fi
 
     # Initialize projec
@@ -1587,22 +1498,55 @@ validate_ddev_directory() {
     return 0
 }
 
-# Extract project name from DDEV configuration
+# Extract project name from DDEV configuration with caching
 get_ddev_project_name() {
-    grep "name:" .ddev/config.yaml | head -n1 | awk '{print $2}'
+    local cache_key="project_name_$(pwd)"
+    
+    # Check cache first
+    if [[ -n "${PROJECT_NAME_CACHE[$cache_key]:-}" ]]; then
+        debug "Using cached project name"
+        echo "${PROJECT_NAME_CACHE[$cache_key]}"
+        return 0
+    fi
+    
+    # Extract from config file
+    local project_name
+    if [[ -f ".ddev/config.yaml" ]]; then
+        project_name=$(grep "name:" .ddev/config.yaml | head -n1 | awk '{print $2}')
+        if [[ -n "$project_name" ]]; then
+            PROJECT_NAME_CACHE["$cache_key"]="$project_name"
+            debug "Cached project name: $project_name"
+            echo "$project_name"
+            return 0
+        fi
+    fi
+    
+    error "Could not determine project name from .ddev/config.yaml"
+    return 1
 }
 
-# Check if Docker container is running for given projec
+# Check if Docker container is running for given project (optimized)
 is_docker_container_running() {
     local project_name="$1"
+    
+    # Check cache first
+    local cached_status
+    if cached_status=$(get_cached_container_status "$project_name"); then
+        debug "Using cached container status: $cached_status"
+        [[ "$cached_status" == "running" ]]
+        return $?
+    fi
 
     debug "Checking for running Docker container: ddev-${project_name}-web"
 
-    if docker ps --format "{{.Names}}" 2>/dev/null | grep -q "ddev-${project_name}-web"; then
+    # Use more efficient docker command with specific container name
+    if docker container inspect "ddev-${project_name}-web" --format '{{.State.Status}}' 2>/dev/null | grep -q "running"; then
         debug "Docker container is running"
+        cache_container_status "$project_name" "running"
         return 0
     else
         debug "Docker container is not running"
+        cache_container_status "$project_name" "stopped"
         return 1
     fi
 }
@@ -1622,41 +1566,65 @@ parse_ddev_json_status() {
     fi
 }
 
-# Check if DDEV reports project as running via JSON API
+# Check if DDEV reports project as running via JSON API (optimized)
 is_ddev_project_running() {
     local project_name="$1"
-    local json_outpu
+    
+    # Check cache first
+    local cached_status
+    if cached_status=$(get_cached_container_status "$project_name"); then
+        debug "Using cached DDEV status: $cached_status"
+        [[ "$cached_status" == "running" ]]
+        return $?
+    fi
 
     debug "Checking DDEV status via JSON output"
 
-    if ! json_output=$(ddev describe --json-output 2>/dev/null); then
-        debug "Failed to get JSON output from DDEV"
+    # Use timeout to prevent hanging
+    local json_output
+    if ! json_output=$(timeout 5 ddev describe --json-output 2>/dev/null); then
+        debug "Failed to get JSON output from DDEV (timeout or error)"
+        cache_container_status "$project_name" "error"
         return 1
     fi
 
     if parse_ddev_json_status "$json_output"; then
         debug "DDEV reports project as running"
+        cache_container_status "$project_name" "running"
         return 0
     else
         debug "DDEV reports project as not running"
+        cache_container_status "$project_name" "stopped"
         return 1
     fi
 }
 
-# Start DDEV project and handle errors
+# Start DDEV project and handle errors (with cache invalidation)
 start_ddev_project() {
     debug "Starting DDEV project..."
 
+    # Get project name for cache invalidation
+    local project_name
+    if project_name=$(get_ddev_project_name 2>/dev/null); then
+        # Invalidate cache before starting
+        unset CONTAINER_STATUS_CACHE["$project_name"]
+        debug "Invalidated cache for project: $project_name"
+    fi
+
     if ! ddev start; then
         error "Failed to start DDEV project. Please check for errors and try again."
+        # Cache the failed state
+        [[ -n "$project_name" ]] && cache_container_status "$project_name" "error"
         return 1
     fi
 
+    # Cache successful start
+    [[ -n "$project_name" ]] && cache_container_status "$project_name" "running"
     debug "DDEV project started successfully"
     return 0
 }
 
-# Check if project is running, start if needed
+# Check if project is running, start if needed (performance optimized)
 check_and_ensure_running_container() {
     # Skip container checks in test mode
     if [[ "${DEV_TEST_MODE:-}" == "true" ]]; then
@@ -1664,29 +1632,73 @@ check_and_ensure_running_container() {
         return 0
     fi
 
-    # Validate we're in a DDEV project directory
+    # Validate we're in a DDEV project directory (cached)
     validate_ddev_directory || return 1
 
-    # Get project name
+    # Get project name (cached)
     local project_name
-    project_name=$(get_ddev_project_name)
+    if ! project_name=$(get_ddev_project_name); then
+        error "Could not determine project name"
+        return 1
+    fi
     debug "Found DDEV project: $project_name"
 
-    # Check if already running (fast path)
+    # Fast path: Check cache first
+    local cached_status
+    if cached_status=$(get_cached_container_status "$project_name"); then
+        if [[ "$cached_status" == "running" ]]; then
+            debug "Project is running (cached) - no action needed"
+            return 0
+        elif [[ "$cached_status" == "error" ]]; then
+            debug "Previous error cached, attempting fresh check"
+            unset CONTAINER_STATUS_CACHE["$project_name"]
+        fi
+    fi
+
+    # Check if already running (optimized Docker check)
     if is_docker_container_running "$project_name"; then
         debug "Project is already running - no action needed"
         return 0
     fi
 
-    # Fallback: check via DDEV JSON API
+    # Fallback: check via DDEV JSON API (with timeout)
     if is_ddev_project_running "$project_name"; then
         debug "Project is running according to DDEV"
         return 0
     fi
 
-    # Project is not running - start i
+    # Project is not running - start it
     debug "Project is not running - starting now"
-    start_ddev_projec
+    start_ddev_project
+}
+
+# Wrapper function for operations that require a running container
+execute_with_container() {
+    local operation_name="$1"
+    shift
+    
+    debug "Executing $operation_name (requires running container)..."
+    ensure_docker_environment
+    
+    if ! check_and_ensure_running_container; then
+        error "Failed to ensure container is running for: $operation_name"
+        return 1
+    fi
+    
+    # Execute the passed function/command
+    "$@"
+}
+
+# Wrapper for operations that only need Docker environment (no container)
+execute_with_docker() {
+    local operation_name="$1"
+    shift
+    
+    debug "Executing $operation_name (requires Docker environment)..."
+    ensure_docker_environment
+    
+    # Execute the passed function/command
+    "$@"
 }
 
 # Ensure DDEV project is running
@@ -1697,7 +1709,232 @@ ensure_ddev_project() {
 
 # Alias for ensure_ddev_project (for backward compatibility)
 check_ddev_project() {
-    ensure_ddev_projec
+    ensure_ddev_project
+}
+
+# Helper functions for common operations
+run_console_command() {
+    local cmd="$1"
+    local flags="${2:-}"
+    local env_vars="${3:-}"
+    
+    if [[ -n "$env_vars" ]]; then
+        ddev exec "$env_vars" bin/console $flags "$cmd"
+    else
+        ddev exec bin/console $flags "$cmd"
+    fi
+}
+
+run_composer_command() {
+    local cmd="$1"
+    ddev composer "$cmd"
+}
+
+run_build_command() {
+    local component="$1"
+    case "$component" in
+        "storefront" | "store" | "s")
+            ddev exec bin/build-storefront.sh
+            ;;
+        "administration" | "admin" | "a")
+            ddev exec bin/build-administration.sh
+            ;;
+        "js" | "javascript" | "j")
+            ddev exec bin/build-js.sh
+            ;;
+        *)
+            warn "Unknown build component: $component"
+            return 1
+            ;;
+    esac
+}
+
+run_watch_command() {
+    local component="$1"
+    case "$component" in
+        "storefront" | "store" | "s")
+            ddev exec bin/watch-storefront.sh
+            ;;
+        "administration" | "admin" | "a")
+            ddev exec bin/watch-administration.sh
+            ;;
+        *)
+            warn "Unknown watch component: $component"
+            return 1
+            ;;
+    esac
+}
+
+# Internal function for console command execution
+_execute_console_command() {
+    # Special handling for cache:clear command to avoid unnecessary restarts
+    if [[ $consoleparam == "cache:clear" ]]; then
+        debug "Running cache:clear command directly..."
+
+        local console_flags=""
+        [[ $verbose == 1 ]] && console_flags+=" -v"
+
+        # Add deprecation handling for Shopware console commands via environment variable
+        if [[ -f "bin/console" && -d "vendor/shopware" ]]; then
+            debug "Automatically suppressing deprecation warnings for Shopware via SYMFONY_DEPRECATIONS_HELPER"
+            run_console_command "cache:clear" "$console_flags" "SYMFONY_DEPRECATIONS_HELPER=weak"
+        else
+            run_console_command "cache:clear" "$console_flags"
+        fi
+        return 0
+    fi
+
+    debug "Executing console command: $consoleparam"
+    local console_flags=""
+    local env_vars=""
+
+    # Add deprecation handling for Shopware console commands via environment variable
+    if [[ -f "bin/console" && -d "vendor/shopware" ]]; then
+        env_vars="SYMFONY_DEPRECATIONS_HELPER=weak"
+        debug "Automatically suppressing deprecation warnings for Shopware via SYMFONY_DEPRECATIONS_HELPER"
+    fi
+
+    # Still respect explicit flag if set, but use it only for logging purposes
+    [[ $no_deprecations == 1 ]] && debug "Deprecation warnings suppressed via user flag"
+    [[ $verbose == 1 ]] && console_flags+=" -v"
+
+    run_console_command "$consoleparam" "$console_flags" "$env_vars"
+}
+
+# Internal function for composer command execution
+_execute_composer_command() {
+    debug "Running composer command: $composerparam"
+    run_composer_command "$composerparam"
+}
+
+# Internal function for package require command
+_execute_require_command() {
+    debug "Adding package: $requireparam"
+    if [[ $prefersource == 1 ]]; then
+        run_composer_command "require $requireparam --prefer-source"
+    else
+        run_composer_command "require $requireparam"
+    fi
+}
+
+# Internal function for package remove command
+_execute_remove_command() {
+    debug "Removing package: $removeparam"
+    run_composer_command "remove $removeparam"
+}
+
+# Internal function for build command
+_execute_build_command() {
+    debug "Building components: $buildparam"
+    run_build_command "$buildparam"
+}
+
+# Internal function for watch command
+_execute_watch_command() {
+    debug "Watching components: $watchparam"
+    run_watch_command "$watchparam"
+}
+
+# Internal function for database export
+_execute_export_command() {
+    debug "Exporting database to: $exportdbparam"
+    ddev export-db -f "$exportdbparam"
+}
+
+# Internal function for database import
+_execute_import_command() {
+    debug "Importing database from: $importdbparam"
+    check_file_exists "$importdbparam"
+    ddev import-db -f "$importdbparam"
+}
+
+# Internal functions for project operations
+_execute_start_command() {
+    debug "Starting project..."
+    
+    # Invalidate cache before starting
+    local project_name
+    if project_name=$(get_ddev_project_name 2>/dev/null); then
+        unset CONTAINER_STATUS_CACHE["$project_name"]
+        debug "Invalidated cache for project: $project_name"
+    fi
+    
+    ddev start
+    ddev describe
+    
+    # Cache running state after successful start
+    [[ -n "$project_name" ]] && cache_container_status "$project_name" "running"
+}
+
+_execute_stop_command() {
+    debug "Stopping project..."
+    
+    # Invalidate cache before stopping
+    local project_name
+    if project_name=$(get_ddev_project_name 2>/dev/null); then
+        unset CONTAINER_STATUS_CACHE["$project_name"]
+        debug "Invalidated cache for project: $project_name"
+    fi
+    
+    ddev stop
+    
+    # Cache stopped state
+    [[ -n "$project_name" ]] && cache_container_status "$project_name" "stopped"
+}
+
+_execute_restart_command() {
+    debug "Restarting project..."
+    
+    # Invalidate cache before restarting
+    local project_name
+    if project_name=$(get_ddev_project_name 2>/dev/null); then
+        unset CONTAINER_STATUS_CACHE["$project_name"]
+        debug "Invalidated cache for project: $project_name"
+    fi
+    
+    ddev restart
+    ddev describe
+    
+    # Cache running state after successful restart
+    [[ -n "$project_name" ]] && cache_container_status "$project_name" "running"
+}
+
+_execute_status_command() {
+    debug "Showing project status..."
+    ddev describe
+}
+
+# Internal functions for direct command execution
+_execute_ssh_command() {
+    debug "Opening SSH connection..."
+    ddev ssh
+}
+
+_execute_sequelace_command() {
+    debug "Starting Sequel Ace..."
+    ddev sequelace
+}
+
+_execute_launch_command() {
+    if [[ -n "$launchparam" ]]; then
+        debug "Opening specific URL: $launchparam"
+        ddev launch "$launchparam"
+    else
+        debug "Opening default project URL..."
+        ddev launch
+    fi
+}
+
+# Internal functions for cache and testing operations
+_execute_delete_cache_command() {
+    debug "Deleting cache files..."
+    ddev exec rm -rf var/cache/dev*
+    ddev exec rm -rf var/cache/prod*
+}
+
+_execute_test_command() {
+    debug "Running tests: ${testparam-}"
+    ddev exec php bin/phpunit "${testparam-}"
 }
 
 # Start execution
