@@ -39,6 +39,12 @@ declare -A CONTAINER_STATUS_CACHE
 declare -A PROJECT_NAME_CACHE
 CACHE_TTL=30  # Cache TTL in seconds
 
+# Command registry for improved parsing
+declare -A COMMAND_REGISTRY
+declare -A COMMAND_ALIASES
+declare -A COMMAND_DESCRIPTIONS
+declare -A COMMAND_PARAMS
+
 # Logging configuration
 LOG_FILE="${SCRIPT_DIR}/${LOG_FILE}"
 LOG_LEVEL="${LOG_LEVEL:-INFO}" # Use LOG_LEVEL from environment or set to INFO
@@ -175,6 +181,461 @@ cleanup_on_error() {
     
     # Reset terminal state
     tput sgr0 2>/dev/null || true
+}
+
+# Command registry management functions
+register_command() {
+    local primary_cmd="$1"
+    local handler_func="$2"
+    local description="$3"
+    local aliases="$4"
+    local param_info="$5"
+    
+    # Register primary command
+    COMMAND_REGISTRY["$primary_cmd"]="$handler_func"
+    COMMAND_DESCRIPTIONS["$primary_cmd"]="$description"
+    COMMAND_PARAMS["$primary_cmd"]="$param_info"
+    
+    # Register aliases
+    if [[ -n "$aliases" ]]; then
+        IFS=' ' read -ra alias_array <<< "$aliases"
+        for alias in "${alias_array[@]}"; do
+            COMMAND_ALIASES["$alias"]="$primary_cmd"
+        done
+    fi
+    
+    debug "Registered command: $primary_cmd with aliases: $aliases"
+}
+
+# Resolve command alias to primary command
+resolve_command() {
+    local cmd="$1"
+    
+    # Check if it's a primary command
+    if [[ -n "${COMMAND_REGISTRY[$cmd]:-}" ]]; then
+        echo "$cmd"
+        return 0
+    fi
+    
+    # Check if it's an alias
+    if [[ -n "${COMMAND_ALIASES[$cmd]:-}" ]]; then
+        echo "${COMMAND_ALIASES[$cmd]}"
+        return 0
+    fi
+    
+    # Command not found
+    return 1
+}
+
+# Get command handler function
+get_command_handler() {
+    local cmd="$1"
+    local primary_cmd
+    
+    if primary_cmd=$(resolve_command "$cmd"); then
+        echo "${COMMAND_REGISTRY[$primary_cmd]}"
+        return 0
+    fi
+    
+    return 1
+}
+
+# List all registered commands
+list_commands() {
+    local category="${1:-all}"
+    
+    echo "Registered commands:"
+    for cmd in "${!COMMAND_REGISTRY[@]}"; do
+        local description="${COMMAND_DESCRIPTIONS[$cmd]}"
+        local params="${COMMAND_PARAMS[$cmd]}"
+        
+        printf "  %-15s %s" "$cmd" "$description"
+        [[ -n "$params" ]] && printf " %s" "$params"
+        echo
+        
+        # Show aliases
+        local aliases=()
+        for alias in "${!COMMAND_ALIASES[@]}"; do
+            if [[ "${COMMAND_ALIASES[$alias]}" == "$cmd" ]]; then
+                aliases+=("$alias")
+            fi
+        done
+        
+        if [[ ${#aliases[@]} -gt 0 ]]; then
+            printf "    aliases: %s\n" "${aliases[*]}"
+        fi
+    done
+}
+
+# Command handler functions
+handle_project_start() {
+    debug "Starting project..."
+    start=1
+}
+
+handle_project_stop() {
+    debug "Stopping project..."
+    down=1
+}
+
+handle_project_restart() {
+    debug "Restarting project..."
+    restart=1
+}
+
+handle_project_status() {
+    debug "Showing project status..."
+    status=1
+}
+
+handle_project_launch() {
+    debug "Opening in browser..."
+    launch=1
+    launchparam="${1-}"
+}
+
+handle_project_ssh() {
+    debug "Connecting via SSH..."
+    ssh=1
+}
+
+handle_db_export() {
+    debug "Exporting database..."
+    exportdb=1
+    exportdbparam="${1-.project/db.sql.gz}"
+}
+
+handle_db_import() {
+    debug "Importing database..."
+    importdb=1
+    importdbparam="${1-.project/db.sql.gz}"
+}
+
+handle_db_sequelace() {
+    debug "Starting Sequel Ace..."
+    sequelace=1
+}
+
+handle_db_migrate() {
+    debug "Running database migrations..."
+    console=1
+    consoleparam="database:migrate ${1-}"
+}
+
+handle_db_migrate_all() {
+    debug "Running all database migrations..."
+    console=1
+    consoleparam="database:migrate --all"
+}
+
+handle_dev_xdebug() {
+    debug "Toggling xdebug..."
+    xdebug=1
+    xdebugparam="${1-on}"
+}
+
+handle_dev_test() {
+    debug "Running tests..."
+    test=1
+    testparam="${1-}"
+}
+
+handle_dev_logs() {
+    debug "Showing logs..."
+    logs=1
+}
+
+handle_dev_mail() {
+    debug "Starting mail server..."
+    mail=1
+}
+
+handle_dev_debug_router() {
+    debug "Running debug:router..."
+    console=1
+    consoleparam="debug:router"
+}
+
+handle_composer_command() {
+    debug "Running composer command..."
+    composer=1
+    composerparam="${1-}"
+}
+
+handle_composer_update() {
+    debug "Updating dependencies..."
+    composer=1
+    composerparam="update"
+}
+
+handle_composer_install() {
+    debug "Installing dependencies..."
+    composer=1
+    composerparam="install"
+}
+
+handle_composer_require() {
+    debug "Adding package..."
+    require=1
+    requireparam="${1-}"
+}
+
+handle_composer_remove() {
+    debug "Removing package..."
+    remove=1
+    removeparam="${1-}"
+}
+
+handle_composer_dump_autoload() {
+    debug "Updating autoloader..."
+    composer=1
+    composerparam="dump-autoload"
+}
+
+handle_composer_prefer_source() {
+    debug "Setting prefer-source..."
+    prefersource=1
+    prefersourceparam="${1-}"
+}
+
+handle_console_command() {
+    debug "Running console command..."
+    console=1
+    consoleparam="${1-}"
+}
+
+handle_cache_delete() {
+    debug "Deleting cache..."
+    deletecache=1
+}
+
+handle_cache_clear() {
+    debug "Clearing cache..."
+    console=1
+    consoleparam="cache:clear"
+}
+
+handle_build_components() {
+    debug "Building components..."
+    build=1
+    buildparam="${1-}"
+}
+
+handle_build_administration() {
+    debug "Building administration..."
+    build=1
+    buildparam="administration"
+}
+
+handle_build_storefront() {
+    debug "Building storefront..."
+    build=1
+    buildparam="storefront"
+}
+
+handle_build_js() {
+    debug "Building JavaScript..."
+    build=1
+    buildparam="js"
+}
+
+handle_watch_components() {
+    debug "Watching components..."
+    watch=1
+    watchparam="${1-}"
+}
+
+handle_watch_administration() {
+    debug "Watching administration..."
+    watch=1
+    watchparam="administration"
+}
+
+handle_watch_storefront() {
+    debug "Watching storefront..."
+    watch=1
+    watchparam="storefront"
+}
+
+handle_messenger_consume() {
+    debug "Starting messenger consumer..."
+    console=1
+    consoleparam="messenger:consume"
+}
+
+handle_plugin_refresh() {
+    debug "Refreshing plugins..."
+    console=1
+    consoleparam="plugin:refresh"
+}
+
+handle_plugin_list() {
+    debug "Listing plugins..."
+    console=1
+    consoleparam="plugin:list"
+}
+
+handle_plugin_activate() {
+    debug "Activating plugin..."
+    console=1
+    consoleparam="plugin:activate ${1-}"
+}
+
+handle_plugin_install() {
+    debug "Installing plugin..."
+    console=1
+    consoleparam="plugin:install ${1-}"
+}
+
+handle_plugin_uninstall() {
+    debug "Uninstalling plugin..."
+    console=1
+    consoleparam="plugin:uninstall ${1-}"
+}
+
+handle_plugin_update() {
+    debug "Updating plugin..."
+    console=1
+    consoleparam="plugin:update ${1-}"
+}
+
+handle_plugin_deactivate() {
+    debug "Deactivating plugin..."
+    console=1
+    consoleparam="plugin:deactivate ${1-}"
+}
+
+handle_project_new() {
+    debug "Creating new project..."
+    new=1
+    newparam="${1-}"
+    if [[ -z "$newparam" ]]; then
+        read -r -p "Project type (symfony|shopware): " newparam
+    fi
+    
+    # Normalize project type
+    case "$newparam" in
+    symfony | sy | sym)
+        newparam="symfony"
+        ;;
+    shopware | sw | sh | sho | shop)
+        newparam="shopware"
+        ;;
+    *)
+        handle_error "Unknown project type: $newparam. Use symfony or shopware" "project creation"
+        return 1
+        ;;
+    esac
+}
+
+handle_project_init() {
+    debug "Initializing project..."
+    init=1
+}
+
+handle_project_backup() {
+    debug "Creating backup..."
+    backup=1
+}
+
+handle_project_restore() {
+    debug "Restoring from backup..."
+    restore=1
+    restoreparam="${1-}"
+}
+
+handle_script_upgrade() {
+    debug "Upgrading script..."
+    upgrade
+}
+
+handle_script_setup() {
+    debug "Setting up configuration..."
+    setup_config
+    exit 0
+}
+
+handle_unknown_command() {
+    local command="$1"
+    shift
+    debug "Executing command in container: $command $*"
+    ddev exec "$command" "$@"
+}
+
+# Initialize command registry
+init_command_registry() {
+    debug "Initializing command registry..."
+    
+    # Project commands
+    register_command "start" "handle_project_start" "Start project" "u up" ""
+    register_command "stop" "handle_project_stop" "Stop project" "d down" ""
+    register_command "restart" "handle_project_restart" "Restart project" "r" ""
+    register_command "status" "handle_project_status" "Show project status" "st sta stat info" ""
+    register_command "launch" "handle_project_launch" "Open in browser" "o" "[url]"
+    register_command "ssh" "handle_project_ssh" "Connect via SSH" "s" ""
+    
+    # Database commands
+    register_command "export" "handle_db_export" "Export database" "e" "[file]"
+    register_command "import" "handle_db_import" "Import database" "i" "[file]"
+    register_command "sequelace" "handle_db_sequelace" "Start Sequel Ace" "se seq" ""
+    register_command "database:migrate" "handle_db_migrate" "Run database migrations" "dami da:mi" "[options]"
+    register_command "database:migrate:all" "handle_db_migrate_all" "Run all database migrations" "damiall da:mi:all" ""
+    
+    # Development commands
+    register_command "xdebug" "handle_dev_xdebug" "Enable/disable xdebug" "x" "[on|off]"
+    register_command "test" "handle_dev_test" "Run tests" "t" "[options]"
+    register_command "logs" "handle_dev_logs" "Show logs" "l" ""
+    register_command "mail" "handle_dev_mail" "Start mail server" "m ma" ""
+    register_command "debug:router" "handle_dev_debug_router" "Show routing information" "dr de:ro" ""
+    
+    # Composer commands
+    register_command "composer" "handle_composer_command" "Run composer command" "com" "[command]"
+    register_command "update" "handle_composer_update" "Update dependencies" "cup" ""
+    register_command "install" "handle_composer_install" "Install dependencies" "cin" ""
+    register_command "require" "handle_composer_require" "Add package" "cre" "[package]"
+    register_command "remove" "handle_composer_remove" "Remove package" "crm" "[package]"
+    register_command "dump-autoload" "handle_composer_dump_autoload" "Update autoloader" "ca cda" ""
+    register_command "prefer-source" "handle_composer_prefer_source" "Reinstall package with source" "src source" "[package]"
+    
+    # Console commands
+    register_command "console" "handle_console_command" "Run console command" "c" "[command]"
+    register_command "cache:delete" "handle_cache_delete" "Delete cache files" "cd cade ca:de" ""
+    register_command "cache:clear" "handle_cache_clear" "Clear cache" "cc cacl ca:cl" ""
+    
+    # Build commands
+    register_command "build" "handle_build_components" "Build components" "b" "[component]"
+    register_command "build:administration" "handle_build_administration" "Build administration" "ba" ""
+    register_command "build:storefront" "handle_build_storefront" "Build storefront" "bs" ""
+    register_command "build:js" "handle_build_js" "Build JavaScript" "bj all" ""
+    
+    # Watch commands
+    register_command "watch" "handle_watch_components" "Watch components" "w" "[component]"
+    register_command "watch:administration" "handle_watch_administration" "Watch administration" "wa wa:ad" ""
+    register_command "watch:storefront" "handle_watch_storefront" "Watch storefront" "ws wa:st" ""
+    
+    # Messenger commands
+    register_command "messenger:consume" "handle_messenger_consume" "Run messenger consumer" "mc meco me:co" ""
+    
+    # Plugin commands
+    register_command "plugin:refresh" "handle_plugin_refresh" "Refresh plugins" "plre pl:re" ""
+    register_command "plugin:list" "handle_plugin_list" "List plugins" "pl pli plli pl:li" ""
+    register_command "plugin:activate" "handle_plugin_activate" "Activate plugin" "plac pl:ac" "[plugin]"
+    register_command "plugin:install" "handle_plugin_install" "Install plugin" "plin pl:in" "[plugin]"
+    register_command "plugin:uninstall" "handle_plugin_uninstall" "Uninstall plugin" "plun pl:un" "[plugin]"
+    register_command "plugin:update" "handle_plugin_update" "Update plugin" "pu plup pl:up" "[plugin]"
+    register_command "plugin:deactivate" "handle_plugin_deactivate" "Deactivate plugin" "plde pl:de" "[plugin]"
+    
+    # Project management commands
+    register_command "new" "handle_project_new" "Create new project" "n" "[type]"
+    register_command "init" "handle_project_init" "Initialize project" "" ""
+    register_command "backup" "handle_project_backup" "Create backup" "bk" ""
+    register_command "restore" "handle_project_restore" "Restore from backup" "rs" "[file]"
+    
+    # System commands
+    register_command "upgrade" "handle_script_upgrade" "Upgrade script" "" ""
+    register_command "setup" "handle_script_setup" "Run configuration wizard" "" ""
+    
+    debug "Command registry initialized with ${#COMMAND_REGISTRY[@]} commands"
 }
 
 # Display usage information
@@ -956,7 +1417,7 @@ check_for_updates() {
     return 0
 }
 
-# Parse command-line parameters
+# Enhanced command parsing with registry
 parse_params() {
     # Initialize all command flags
     init_command_flags
@@ -966,329 +1427,27 @@ parse_params() {
     [[ -z "$command" ]] && return 0
     shift || true
 
-    case "$command" in
-    u | up | start)
-        debug "Starting project..."
-        start=1
-        ;;
-
-    d | down | stop)
-        debug "Stopping project..."
-        down=1
-        ;;
-
-    r | restart)
-        debug "Restarting project..."
-        restart=1
-        ;;
-
-    st | sta | stat | status | info)
-        debug "Showing project status..."
-        status=1
-        ;;
-
-    o | launch)
-        debug "Opening in browser..."
-        launch=1
-        launchparam="${1-}"
-        [[ -n "$launchparam" ]] && shift
-        ;;
-
-    s | ssh)
-        debug "Connecting via SSH..."
-        ssh=1
-        ;;
-
-    # Database commands
-    e | export)
-        debug "Exporting database..."
-        exportdb=1
-        exportdbparam="${1-.project/db.sql.gz}"
-        [[ -n "$exportdbparam" ]] && shift
-        ;;
-
-    i | import)
-        debug "Importing database..."
-        importdb=1
-        importdbparam="${1-.project/db.sql.gz}"
-        [[ -n "$importdbparam" ]] && shift
-        ;;
-
-    se | seq | sequelace)
-        debug "Starting Sequel Ace..."
-        sequelace=1
-        ;;
-
-    dami | da:mi | database:migrate)
-        debug "Running database migrations..."
-        console=1
-        consoleparam="database:migrate ${1-}"
-        [[ -n "${1-}" ]] && shift
-        ;;
-
-    damiall | da:mi:all | database:migrate:all)
-        debug "Running all database migrations..."
-        console=1
-        consoleparam="database:migrate --all"
-        ;;
-
-    # Development commands
-    x | xdebug)
-        debug "Toggling xdebug..."
-        xdebug=1
-        xdebugparam="${1-on}"
-        [[ -n "${1-}" ]] && shift
-        ;;
-
-    t | test)
-        debug "Running tests..."
-        test=1
-        testparam="${1-}"
-        [[ -n "$testparam" ]] && shift
-        ;;
-
-    l | logs)
-        debug "Showing logs..."
-        logs=1
-        ;;
-
-    m | ma | mail)
-        debug "Starting mail server..."
-        mail=1
-        ;;
-
-    dr | de:ro | debug:router)
-        debug "Running debug:router..."
-        console=1
-        consoleparam="debug:router"
-        ;;
-
-    # Composer commands
-    com | composer)
-        debug "Running composer command..."
-        composer=1
-        composerparam="${1-}"
-        [[ -n "$composerparam" ]] && shift
-        ;;
-
-    cup | update)
-        debug "Updating dependencies..."
-        composer=1
-        composerparam="update"
-        ;;
-
-    cin | install)
-        debug "Installing dependencies..."
-        composer=1
-        composerparam="install"
-        ;;
-
-    cre | require)
-        debug "Adding package..."
-        require=1
-        requireparam="${1-}"
-        [[ -n "$requireparam" ]] && shift
-        ;;
-
-    crm | remove)
-        debug "Removing package..."
-        remove=1
-        removeparam="${1-}"
-        [[ -n "$removeparam" ]] && shift
-        ;;
-
-    ca | cda | dump-autoload)
-        debug "Updating autoloader..."
-        composer=1
-        composerparam="dump-autoload"
-        ;;
-
-    src | source | prefer-source)
-        debug "Setting prefer-source..."
-        prefersource=1
-        prefersourceparam="${1-}"
-        [[ -n "$prefersourceparam" ]] && shift
-        ;;
-
-    # bin/Console commands
-    c | console)
-        debug "Running console command..."
-        console=1
-        consoleparam="${1-}"
-        [[ -n "$consoleparam" ]] && shift
-        ;;
-
-    cd | cade | ca:de | cache:delete)
-        debug "Deleting cache..."
-        deletecache=1
-        ;;
-
-    cc | cacl | ca:cl | cache:clear)
-        debug "Clearing cache..."
-        console=1
-        consoleparam="cache:clear"
-        ;;
-
-    # Shopware commands
-    b | build)
-        debug "Building components..."
-        build=1
-        buildparam="${1-}"
-        [[ -n "$buildparam" ]] && shift
-        ;;
-
-    ba | build:administration)
-        debug "Building administration..."
-        build=1
-        buildparam="administration"
-        ;;
-
-    bs | build:storefront)
-        debug "Building storefront..."
-        build=1
-        buildparam="storefront"
-        ;;
-
-    bj | build:js | all)
-        debug "Building JavaScript..."
-        build=1
-        buildparam="js"
-        ;;
-
-    w | watch)
-        debug "Watching components..."
-        watch=1
-        watchparam="${1-}"
-        [[ -n "$watchparam" ]] && shift
-        ;;
-
-    wa | wa:ad | watch:administration)
-        debug "Watching administration..."
-        watch=1
-        watchparam="administration"
-        ;;
-
-    ws | wa:st | watch:storefront)
-        debug "Watching storefront..."
-        watch=1
-        watchparam="storefront"
-        ;;
-
-    mc | meco | me:co | messenger:consume)
-        debug "Starting messenger consumer..."
-        console=1
-        consoleparam="messenger:consume"
-        ;;
-
-    # Plugin commands
-    plre | pl:re | plugin:refresh)
-        debug "Refreshing plugins..."
-        console=1
-        consoleparam="plugin:refresh"
-        ;;
-
-    pl | pli | plli | pl:li | plugin:list)
-        debug "Listing plugins..."
-        console=1
-        consoleparam="plugin:list"
-        ;;
-
-    plac | pl:ac | plugin:activate)
-        debug "Activating plugin..."
-        console=1
-        consoleparam="plugin:activate ${1-}"
-        [[ -n "${1-}" ]] && shift
-        ;;
-
-    plin | pl:in | plugin:install)
-        debug "Installing plugin..."
-        console=1
-        consoleparam="plugin:install ${1-}"
-        [[ -n "${1-}" ]] && shift
-        ;;
-
-    plun | pl:un | plugin:uninstall)
-        debug "Uninstalling plugin..."
-        console=1
-        consoleparam="plugin:uninstall ${1-}"
-        [[ -n "${1-}" ]] && shift
-        ;;
-
-    pu | plup | pl:up | plugin:update)
-        debug "Updating plugin..."
-        console=1
-        consoleparam="plugin:update ${1-}"
-        [[ -n "${1-}" ]] && shift
-        ;;
-
-    plde | pl:de | plugin:deactivate)
-        debug "Deactivating plugin..."
-        console=1
-        consoleparam="plugin:deactivate ${1-}"
-        [[ -n "${1-}" ]] && shift
-        ;;
-
-    # Project commands
-    n | new)
-        debug "Creating new project..."
-        new=1
-        newparam="${1-}"
-        if [[ -z "$newparam" ]]; then
-            read -r -p "Project type (symfony|shopware): " newparam
-        else
-            shift
+    # Try to find command handler
+    local handler
+    if handler=$(get_command_handler "$command"); then
+        debug "Found handler for command: $command -> $handler"
+        
+        # Execute the handler with remaining arguments
+        if ! "$handler" "$@"; then
+            handle_error "Command handler failed: $command" "command execution"
+            return 1
         fi
-
-        # Normalize project type
-        case "$newparam" in
-        symfony | sy | sym)
-            newparam="symfony"
-            ;;
-        shopware | sw | sh | sho | shop)
-            newparam="shopware"
-            ;;
-        *)
-            die "Unknown project type: $newparam. Use symfony or shopware"
-            ;;
-        esac
-        ;;
-
-    init)
-        debug "Initializing project..."
-        init=1
-        ;;
-
-    bk | backup)
-        debug "Creating backup..."
-        backup=1
-        ;;
-
-    rs | restore)
-        debug "Restoring from backup..."
-        restore=1
-        restoreparam="${1-}"
-        [[ -n "$restoreparam" ]] && shift
-        ;;
-
-    upgrade)
-        debug "Upgrading script..."
-        upgrade
-        ;;
-
-    setup)
-        debug "Setting up configuration..."
-        setup_config
-        exit 0
-        ;;
-
-    *)
-        debug "Executing command in container: $command $*"
-        ddev exec "$command" "$@"
-        ;;
-    esac
-
+        
+        return 0
+    fi
+    
+    # Fallback to unknown command handler
+    debug "No specific handler found for command: $command"
+    handle_unknown_command "$command" "$@"
     return 0
 }
+
+# Removed legacy parse_params function - now using command registry system
 
 # Initialize command flags
 init_command_flags() {
@@ -1395,6 +1554,9 @@ main() {
 
     # Load configuration if available
     load_config || debug "No existing configuration found, using defaults"
+    
+    # Initialize command registry
+    init_command_registry
 
     # Skip configuration setup in test mode or for special commands
     if [[ ! "${DEV_TEST_MODE:-}" == "true" ]] && [[ ! -f "$CONFIG_FILE" ]]; then
