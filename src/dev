@@ -84,10 +84,97 @@ info() { log "INFO" "$1"; }
 warn() { log "WARN" "$1"; }
 error() { log "ERROR" "$1" >&2; }
 
-# Replace old die() function
+# Enhanced error handling functions
 die() {
     error "$1"
+    cleanup_on_error
     exit "${2:-1}"
+}
+
+# Consistent error handling with context
+handle_error() {
+    local error_msg="$1"
+    local context="${2:-unknown}"
+    local exit_code="${3:-1}"
+    
+    error "[$context] $error_msg"
+    debug "Error occurred in context: $context"
+    
+    # Log error details for debugging
+    if [[ "${LOG_LEVEL:-}" == "DEBUG" ]]; then
+        debug "Call stack: ${FUNCNAME[*]}"
+        debug "Error code: $exit_code"
+    fi
+    
+    return "$exit_code"
+}
+
+# Safe command execution with error handling
+safe_execute() {
+    local cmd="$1"
+    local context="${2:-command execution}"
+    local error_msg="${3:-Command failed}"
+    
+    debug "Executing: $cmd"
+    
+    if ! eval "$cmd" 2>/dev/null; then
+        handle_error "$error_msg: $cmd" "$context"
+        return 1
+    fi
+    
+    debug "Command executed successfully: $cmd"
+    return 0
+}
+
+# Validate input parameters
+validate_param() {
+    local param="$1"
+    local param_name="${2:-parameter}"
+    local validation_type="${3:-non_empty}"
+    
+    case "$validation_type" in
+        "non_empty")
+            if [[ -z "$param" ]]; then
+                handle_error "Missing required parameter: $param_name" "parameter validation"
+                return 1
+            fi
+            ;;
+        "file_exists")
+            if [[ ! -f "$param" ]]; then
+                handle_error "File not found: $param" "file validation"
+                return 1
+            fi
+            ;;
+        "dir_exists")
+            if [[ ! -d "$param" ]]; then
+                handle_error "Directory not found: $param" "directory validation"
+                return 1
+            fi
+            ;;
+        "version_format")
+            if [[ ! "$param" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?$ ]]; then
+                handle_error "Invalid version format: $param (expected: x.y or x.y.z)" "version validation"
+                return 1
+            fi
+            ;;
+    esac
+    
+    return 0
+}
+
+# Cleanup function for error scenarios
+cleanup_on_error() {
+    debug "Performing error cleanup..."
+    
+    # Kill any background processes
+    jobs -p | xargs -r kill 2>/dev/null || true
+    
+    # Clear sensitive cache data
+    unset CONTAINER_STATUS_CACHE
+    unset PROJECT_NAME_CACHE
+    
+    # Reset terminal state
+    tput sgr0 2>/dev/null || true
 }
 
 # Display usage information
@@ -326,12 +413,21 @@ upgrade() {
     local temp_script="/tmp/dev_new_version"
     local temp_hash="/tmp/dev_new_version.sha256"
 
-    # Check current version against latest version firs
+    # Check current version against latest version first
     local latest_version
     if ! latest_version=$(curl -s -m 5 "https://raw.githubusercontent.com/akaw/dev-cli-tools/main/src/dev" | grep -m 1 "^VERSION=" | cut -d'"' -f2); then
-        error "Could not check for updates. Please check your internet connection."
+        handle_error "Could not check for updates. Please check your internet connection." "update check"
+        info "Possible solutions:"
+        info "  - Check your internet connection"
+        info "  - Verify firewall settings"
+        info "  - Try again later"
         return 1
     fi
+    
+    validate_param "$latest_version" "latest_version" "version_format" || {
+        handle_error "Invalid version format received from server: $latest_version" "update check"
+        return 1
+    }
 
     if [[ "$latest_version" == "$VERSION" ]]; then
         info "You already have the latest version ($VERSION)."
@@ -341,15 +437,30 @@ upgrade() {
     info "New version found: $latest_version (current: $VERSION)"
     info "Downloading update..."
 
-    # Download new version and hash file
+    # Download new version and hash file with better error handling
     if ! curl -s -o "$temp_script" "https://raw.githubusercontent.com/akaw/dev-cli-tools/main/src/dev"; then
-        error "Download of new version failed."
+        handle_error "Download of new version failed" "update download"
+        info "Please check your internet connection and try again"
         return 1
     fi
 
     if ! curl -s -o "$temp_hash" "https://raw.githubusercontent.com/akaw/dev-cli-tools/main/src/dev.sha256"; then
-        error "Download of hash file failed."
+        handle_error "Download of hash file failed" "update download"
         rm -f "$temp_script"
+        info "Please check your internet connection and try again"
+        return 1
+    fi
+    
+    # Verify downloaded files are not empty
+    if [[ ! -s "$temp_script" ]]; then
+        handle_error "Downloaded script file is empty" "update download"
+        rm -f "$temp_script" "$temp_hash"
+        return 1
+    fi
+    
+    if [[ ! -s "$temp_hash" ]]; then
+        handle_error "Downloaded hash file is empty" "update download"
+        rm -f "$temp_script" "$temp_hash"
         return 1
     fi
 
@@ -358,22 +469,42 @@ upgrade() {
     expected_hash=$(cat "$temp_hash")
     local actual_hash
 
+    # Validate expected hash format
+    if [[ ! "$expected_hash" =~ ^[a-f0-9]{64}$ ]]; then
+        handle_error "Invalid hash format received: $expected_hash" "hash verification"
+        rm -f "$temp_script" "$temp_hash"
+        return 1
+    fi
+
     if command -v shasum >/dev/null 2>&1; then
         # macOS typically uses shasum
-        actual_hash=$(shasum -a 256 "$temp_script" | awk '{print $1}')
+        if ! actual_hash=$(shasum -a 256 "$temp_script" 2>/dev/null | awk '{print $1}'); then
+            handle_error "Failed to calculate SHA256 hash using shasum" "hash verification"
+            rm -f "$temp_script" "$temp_hash"
+            return 1
+        fi
     elif command -v sha256sum >/dev/null 2>&1; then
         # Linux typically uses sha256sum
-        actual_hash=$(sha256sum "$temp_script" | awk '{print $1}')
+        if ! actual_hash=$(sha256sum "$temp_script" 2>/dev/null | awk '{print $1}'); then
+            handle_error "Failed to calculate SHA256 hash using sha256sum" "hash verification"
+            rm -f "$temp_script" "$temp_hash"
+            return 1
+        fi
     else
-        error "No SHA256 utility found. Cannot verify file integrity."
+        handle_error "No SHA256 utility found (shasum or sha256sum required)" "hash verification"
+        info "Please install a SHA256 utility and try again"
         rm -f "$temp_script" "$temp_hash"
         return 1
     fi
 
     if [[ "$actual_hash" != "$expected_hash" ]]; then
-        error "Hash verification failed! The update might be compromised."
+        handle_error "Hash verification failed! The update might be compromised." "hash verification"
         error "Expected: $expected_hash"
         error "Actual: $actual_hash"
+        info "This could indicate:"
+        info "  - Network corruption during download"
+        info "  - Compromised update server"
+        info "  - Man-in-the-middle attack"
         rm -f "$temp_script" "$temp_hash"
         return 1
     fi
@@ -384,17 +515,43 @@ upgrade() {
     # Remove update marker to force version check on next run
     rm -f "/tmp/dev_update_check_$(date +%Y%m%d)" 2>/dev/null
 
+    # Backup current script with error handling
+    if ! cp "$script_path" "${script_path}.backup"; then
+        handle_error "Failed to create backup of current script" "update installation"
+        rm -f "$temp_script" "$temp_hash"
+        return 1
+    fi
+
+    # Install new version with atomic operation
     if mv "$temp_script" "$script_path"; then
-        chmod +x "$script_path"
+        if ! chmod +x "$script_path"; then
+            handle_error "Failed to set executable permissions on updated script" "update installation"
+            # Restore backup
+            mv "${script_path}.backup" "$script_path"
+            rm -f "$temp_hash"
+            return 1
+        fi
+        
         rm -f "$temp_hash"
         info "Update successful!"
-        # Get the new version directly from the scrip
-        VERSION=$(grep -m 1 "^VERSION=" "$script_path" | cut -d'"' -f2)
-        info "New version: ${VERSION}"
+        
+        # Get the new version directly from the script
+        local new_version
+        if new_version=$(grep -m 1 "^VERSION=" "$script_path" | cut -d'"' -f2); then
+            VERSION="$new_version"
+            info "New version: ${VERSION}"
+        else
+            warn "Could not determine new version from updated script"
+        fi
+        
         info "Please restart your shell or run 'hash -r' to clear command cache."
     else
-        error "Update failed. Restoring backup..."
-        mv "${script_path}.backup" "$script_path"
+        handle_error "Failed to install updated script" "update installation"
+        info "Restoring backup..."
+        if ! mv "${script_path}.backup" "$script_path"; then
+            handle_error "CRITICAL: Failed to restore backup! Script may be corrupted." "update installation"
+            info "Please manually restore from: ${script_path}.backup"
+        fi
         rm -f "$temp_script" "$temp_hash"
         return 1
     fi
@@ -403,15 +560,23 @@ upgrade() {
     exit 0
 }
 
-# Function to check if a file exists
+# Enhanced file existence check with better error handling
 check_file_exists() {
     local file_path="$1"
+    local context="${2:-file check}"
+    
+    validate_param "$file_path" "file_path" "non_empty" || return 1
+    
     if [[ ! -f "$file_path" ]]; then
-        die "File not found: $file_path"
+        handle_error "File not found: $file_path" "$context"
+        return 1
     fi
+    
+    debug "File exists: $file_path"
+    return 0
 }
 
-# Function to ensure the Docker environment is ready
+# Enhanced Docker environment verification
 ensure_docker_environment() {
     # Skip docker checks in test mode
     if [[ "${DEV_TEST_MODE:-}" == "true" ]]; then
@@ -423,12 +588,35 @@ ensure_docker_environment() {
 
     # Check if DDEV is installed
     if ! command -v ddev &>/dev/null; then
-        die "ddev is not installed. Please install ddev first."
+        handle_error "ddev is not installed. Please install ddev first." "docker environment check"
+        info "Visit https://ddev.readthedocs.io/en/stable/#installation for installation instructions"
+        return 1
     fi
 
-    # Check if Docker is running and responsive
-    if ! docker info >/dev/null 2>&1; then
-        die "Docker is not running or not responsive. Please start your Docker environment (Docker Desktop, OrbStack, etc.) and try again."
+    # Check DDEV version compatibility
+    local ddev_version
+    if ddev_version=$(ddev version --json-output 2>/dev/null | grep -o '"DDEV version":"[^"]*"' | cut -d'"' -f4); then
+        debug "DDEV version: $ddev_version"
+    else
+        warn "Could not determine DDEV version"
+    fi
+
+    # Check if Docker is running and responsive with timeout
+    if ! timeout 10 docker info >/dev/null 2>&1; then
+        handle_error "Docker is not running or not responsive" "docker environment check"
+        info "Please start your Docker environment (Docker Desktop, OrbStack, etc.) and try again"
+        info "Common solutions:"
+        info "  - Start Docker Desktop"
+        info "  - Check if Docker daemon is running"
+        info "  - Verify Docker permissions"
+        return 1
+    fi
+
+    # Verify Docker connectivity
+    if ! docker ps >/dev/null 2>&1; then
+        handle_error "Docker is running but not accessible" "docker environment check"
+        info "This might be a permissions issue. Try running with appropriate permissions."
+        return 1
     fi
 
     debug "Docker environment is ready."
@@ -510,9 +698,11 @@ bin/build-administration.sh
 EOL
         chmod +x .project/scripts/build-all.sh
         ;;
-    *)
-        die "Unsupported project type: $project_type"
-        ;;
+            *)
+            handle_error "Unsupported project type: $project_type" "project structure creation"
+            info "Supported project types: symfony, shopware"
+            return 1
+            ;;
     esac
 
     # Create gitignore if it doesn't exis
@@ -1487,14 +1677,39 @@ create_package_name() {
     echo "$vendor$name"
 }
 
-# Validate that we're in a DDEV project directory
+# Enhanced DDEV project directory validation
 validate_ddev_directory() {
-    if [ ! -d ".ddev" ] || [ ! -f ".ddev/config.yaml" ]; then
-        warn "This command requires a DDEV project, but none was found in the current directory."
-        info "Please change to a directory with a DDEV project or create one with 'ddev config'."
-        info "Alternatively, you can create a new project (Symfony or Shopware) with 'dev new'."
+    local current_dir
+    current_dir=$(pwd)
+    
+    # Check for .ddev directory
+    if [[ ! -d ".ddev" ]]; then
+        handle_error "No .ddev directory found in current directory: $current_dir" "ddev validation"
+        info "This command requires a DDEV project."
+        info "Solutions:"
+        info "  - Change to a directory with a DDEV project"
+        info "  - Initialize a new DDEV project with 'ddev config'"
+        info "  - Create a new project with 'dev new'"
         return 1
     fi
+    
+    # Check for config.yaml
+    if [[ ! -f ".ddev/config.yaml" ]]; then
+        handle_error "DDEV configuration file not found: .ddev/config.yaml" "ddev validation"
+        info "The .ddev directory exists but is missing the configuration file."
+        info "Try running 'ddev config' to regenerate the configuration."
+        return 1
+    fi
+    
+    # Validate config.yaml is readable and has basic structure
+    if ! grep -q "^name:" ".ddev/config.yaml" 2>/dev/null; then
+        handle_error "Invalid or corrupted DDEV configuration file" "ddev validation"
+        info "The .ddev/config.yaml file appears to be corrupted."
+        info "Try running 'ddev config' to regenerate the configuration."
+        return 1
+    fi
+    
+    debug "Valid DDEV project found in: $current_dir"
     return 0
 }
 
@@ -1521,7 +1736,8 @@ get_ddev_project_name() {
         fi
     fi
     
-    error "Could not determine project name from .ddev/config.yaml"
+    handle_error "Could not determine project name from .ddev/config.yaml" "project name extraction"
+    info "Please ensure the DDEV configuration file contains a valid 'name:' entry"
     return 1
 }
 
@@ -1612,7 +1828,12 @@ start_ddev_project() {
     fi
 
     if ! ddev start; then
-        error "Failed to start DDEV project. Please check for errors and try again."
+        handle_error "Failed to start DDEV project" "ddev start"
+        info "Common solutions:"
+        info "  - Check if Docker is running"
+        info "  - Verify DDEV configuration with 'ddev config'"
+        info "  - Check for port conflicts with 'ddev describe'"
+        info "  - Review logs with 'ddev logs'"
         # Cache the failed state
         [[ -n "$project_name" ]] && cache_container_status "$project_name" "error"
         return 1
@@ -1638,7 +1859,8 @@ check_and_ensure_running_container() {
     # Get project name (cached)
     local project_name
     if ! project_name=$(get_ddev_project_name); then
-        error "Could not determine project name"
+        handle_error "Could not determine project name" "container check"
+        info "Please ensure you're in a valid DDEV project directory"
         return 1
     fi
     debug "Found DDEV project: $project_name"
@@ -1681,7 +1903,8 @@ execute_with_container() {
     ensure_docker_environment
     
     if ! check_and_ensure_running_container; then
-        error "Failed to ensure container is running for: $operation_name"
+        handle_error "Failed to ensure container is running for: $operation_name" "container execution"
+        info "Please check your DDEV project status and Docker environment"
         return 1
     fi
     
@@ -1844,8 +2067,29 @@ _execute_export_command() {
 # Internal function for database import
 _execute_import_command() {
     debug "Importing database from: $importdbparam"
-    check_file_exists "$importdbparam"
-    ddev import-db -f "$importdbparam"
+    
+    # Validate import file with context
+    if ! check_file_exists "$importdbparam" "database import"; then
+        return 1
+    fi
+    
+    # Check file size and format
+    if [[ ! -s "$importdbparam" ]]; then
+        handle_error "Import file is empty: $importdbparam" "database import"
+        return 1
+    fi
+    
+    # Execute import with error handling
+    if ! ddev import-db -f "$importdbparam"; then
+        handle_error "Database import failed" "database import"
+        info "Please check:"
+        info "  - File format (SQL, compressed SQL, etc.)"
+        info "  - Database connectivity"
+        info "  - Available disk space"
+        return 1
+    fi
+    
+    info "Database import completed successfully"
 }
 
 # Internal functions for project operations
