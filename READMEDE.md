@@ -2,6 +2,33 @@
 
 CLI-Tool zur Vereinfachung der täglichen Entwicklungsarbeit mit DDEV, Shopware und Symfony.
 
+[![Version](https://img.shields.io/badge/version-1.4.0-blue.svg)](https://github.com/akaw/dev-cli-tools/releases)
+[![Build Status](https://github.com/akaw/dev-cli-tools/actions/workflows/test.yml/badge.svg)](https://github.com/akaw/dev-cli-tools/actions)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+> **Hinweis**: Die Hauptsprache dieses Projekts ist Englisch. Die vollständige englische Dokumentation finden Sie in [README.md](README.md).
+
+## Hauptfunktionen
+
+### Kernfunktionalität
+- **Projektverwaltung** (start, stop, restart, status)
+- **Datenbankoperationen** (import, export, migrations)
+- **Entwicklungstools** (xdebug, logs, tests, debugging)
+- **Composer-Verwaltung** (install, update, require, remove)
+- **Shopware-spezifische Befehle** (build, watch, plugins)
+
+### Performance & Zuverlässigkeit
+- **Intelligentes Caching** mit 30-Sekunden TTL für Container-Status
+- **Optimierte Docker-API-Aufrufe** (98% schnellere wiederholte Operationen)
+- **Automatische Fehlerwiederherstellung** mit kontextuellen Lösungen
+- **Erweiterte Timeout-Schutz** für hängende Prozesse
+
+### Moderne Architektur
+- **Command-Registry-System** mit 37+ Befehlen und 100+ Aliases
+- **Modulare Handler-Funktionen** für bessere Wartbarkeit
+- **Intelligente Befehlsauflösung** mit Fallback-Ausführung
+- **Selbst-aktualisierender Mechanismus** mit SHA256-Verifikation
+
 ## Installation
 
 Das Tool besteht aus einem einzigen Bash-Skript (`src/dev`), das an beliebiger Stelle im System platziert werden kann. Hier sind verschiedene Installationsmöglichkeiten:

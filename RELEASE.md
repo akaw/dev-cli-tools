@@ -112,7 +112,7 @@ For critical issues in released versions:
 ## Files That Must Be Updated for Each Release
 
 1. **src/dev** (2 locations):
-   - Line ~8: `# Version: X.X.X`
+   - Line ~9: `# Version: X.X.X`
    - Line ~15: `VERSION="X.X.X"`
 
 2. **README.md**:
@@ -122,6 +122,7 @@ For critical issues in released versions:
    - Add new version entry at the top
    - Include date in format: `## [X.X.X] - YYYY-MM-DD`
    - List all changes under appropriate categories (Added, Changed, Fixed, etc.)
+   - For major releases, include performance metrics and migration notes
 
 ## Validation
 
