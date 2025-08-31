@@ -769,7 +769,7 @@ is_cache_valid() {
             return 0
         else
             debug "Cache expired for $cache_key (age: ${age}s)"
-            unset CONTAINER_STATUS_CACHE["$cache_key"]
+            unset "CONTAINER_STATUS_CACHE[$cache_key]"
         fi
     fi
     return 1
@@ -826,7 +826,7 @@ cleanup_expired_cache() {
         
         if [[ $age -ge $CACHE_TTL ]]; then
             debug "Removing expired cache entry: $key (age: ${age}s)"
-            unset CONTAINER_STATUS_CACHE["$key"]
+            unset "CONTAINER_STATUS_CACHE[$key]"
         fi
     done
 }
@@ -1877,7 +1877,8 @@ validate_ddev_directory() {
 
 # Extract project name from DDEV configuration with caching
 get_ddev_project_name() {
-    local cache_key="project_name_$(pwd)"
+    local cache_key
+    cache_key="project_name_$(pwd)"
     
     # Check cache first
     if [[ -n "${PROJECT_NAME_CACHE[$cache_key]:-}" ]]; then
@@ -1985,7 +1986,7 @@ start_ddev_project() {
     local project_name
     if project_name=$(get_ddev_project_name 2>/dev/null); then
         # Invalidate cache before starting
-        unset CONTAINER_STATUS_CACHE["$project_name"]
+        unset "CONTAINER_STATUS_CACHE[$project_name]"
         debug "Invalidated cache for project: $project_name"
     fi
 
@@ -2035,7 +2036,7 @@ check_and_ensure_running_container() {
             return 0
         elif [[ "$cached_status" == "error" ]]; then
             debug "Previous error cached, attempting fresh check"
-            unset CONTAINER_STATUS_CACHE["$project_name"]
+            unset "CONTAINER_STATUS_CACHE[$project_name]"
         fi
     fi
 
@@ -2104,9 +2105,9 @@ run_console_command() {
     local env_vars="${3:-}"
     
     if [[ -n "$env_vars" ]]; then
-        ddev exec "$env_vars" bin/console $flags "$cmd"
+        ddev exec "$env_vars" bin/console "$flags" "$cmd"
     else
-        ddev exec bin/console $flags "$cmd"
+        ddev exec bin/console "$flags" "$cmd"
     fi
 }
 
@@ -2261,7 +2262,7 @@ _execute_start_command() {
     # Invalidate cache before starting
     local project_name
     if project_name=$(get_ddev_project_name 2>/dev/null); then
-        unset CONTAINER_STATUS_CACHE["$project_name"]
+        unset "CONTAINER_STATUS_CACHE[$project_name]"
         debug "Invalidated cache for project: $project_name"
     fi
     
@@ -2278,7 +2279,7 @@ _execute_stop_command() {
     # Invalidate cache before stopping
     local project_name
     if project_name=$(get_ddev_project_name 2>/dev/null); then
-        unset CONTAINER_STATUS_CACHE["$project_name"]
+        unset "CONTAINER_STATUS_CACHE[$project_name]"
         debug "Invalidated cache for project: $project_name"
     fi
     
@@ -2294,7 +2295,7 @@ _execute_restart_command() {
     # Invalidate cache before restarting
     local project_name
     if project_name=$(get_ddev_project_name 2>/dev/null); then
-        unset CONTAINER_STATUS_CACHE["$project_name"]
+        unset "CONTAINER_STATUS_CACHE[$project_name]"
         debug "Invalidated cache for project: $project_name"
     fi
     
