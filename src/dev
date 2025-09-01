@@ -6,13 +6,13 @@
 #
 # Description: dDEV shortening tools
 # Usage: dev [OPTIONS] [PARAMETERS]
-# Version: 1.5.1
+# Version: 1.6.0
 # https://github.com/akaw/dev-cli-tools/
 #
 # shellcheck disable=SC2034,SC2168,SC2317
 
 # Default Configuration
-VERSION="1.5.1"
+VERSION="1.6.0"
 DOCKER_ENVIRONMENT="${DOCKER_ENVIRONMENT:-orbstack}"
 BACKUP_DIR="${BACKUP_DIR:-.project/backups}"
 DB_EXPORT_FILE="${DB_EXPORT_FILE:-.project/db.sql.gz}"
@@ -358,44 +358,44 @@ handle_dev_debug_router() {
 
 handle_composer_command() {
     debug "Running composer command..."
-    composer=1
+    composersmart=1
     composerparam="${1-}"
 }
 
 handle_composer_update() {
     debug "Updating dependencies..."
-    composer=1
+    composersmart=1
     composerparam="update"
 }
 
 handle_composer_install() {
     debug "Installing dependencies..."
-    composer=1
+    composersmart=1
     composerparam="install"
 }
 
 handle_composer_require() {
     debug "Adding package..."
-    require=1
-    requireparam="${1-}"
+    composersmart=1
+    composerparam="${1-}"
 }
 
 handle_composer_remove() {
     debug "Removing package..."
-    remove=1
-    removeparam="${1-}"
+    composersmart=1
+    composerparam="${1-}"
 }
 
 handle_composer_dump_autoload() {
     debug "Updating autoloader..."
-    composer=1
+    composersmart=1
     composerparam="dump-autoload"
 }
 
 handle_composer_prefer_source() {
     debug "Setting prefer-source..."
-    prefersource=1
-    prefersourceparam="${1-}"
+    composersmart=1
+    composerparam="${1-}"
 }
 
 handle_console_command() {
@@ -406,7 +406,7 @@ handle_console_command() {
 
 handle_cache_delete() {
     debug "Deleting cache..."
-    deletecache=1
+    cachedelete=1
 }
 
 handle_cache_clear() {
@@ -2132,6 +2132,7 @@ init_command_flags() {
     mail=0
     deletecache=0
     cacheclear=0
+    cachedelete=0
 
     # Console commands
     console=0
@@ -2148,6 +2149,7 @@ init_command_flags() {
     # Composer commands
     composer=0
     composerparam=""
+    composersmart=0
     require=0
     requireparam=""
     remove=0
@@ -2271,15 +2273,20 @@ execute_commands() {
     if [[ $composer == 1 ]]; then
         execute_with_container "composer command" _execute_composer_command
     fi
+    
+    # Smart composer commands (try local first)
+    if [[ $composersmart == 1 ]]; then
+        _execute_composer_smart_command
+    fi
 
     # Handle package requirements
     if [[ $require == 1 ]]; then
-        execute_with_container "package require" _execute_require_command
+        _execute_composer_smart_require_command
     fi
 
     # Handle package removal
     if [[ $remove == 1 ]]; then
-        execute_with_container "package remove" _execute_remove_command
+        _execute_composer_smart_remove_command
     fi
 
     # Build shopware components
@@ -2339,6 +2346,11 @@ execute_commands() {
     if [[ $cacheclear == 1 ]]; then
         # Execute cache:clear without starting DDEV if not running
         _execute_cache_clear_command
+    fi
+    
+    if [[ $cachedelete == 1 ]]; then
+        # Execute cache delete without starting DDEV if not running
+        _execute_cache_delete_command
     fi
 
     # Testing
@@ -3038,6 +3050,93 @@ _execute_cache_clear_command() {
             info "To clear application cache, start DDEV first: dev start"
             return 1
         fi
+    fi
+}
+
+_execute_cache_delete_command() {
+    debug "Deleting cache (smart execution)..."
+    
+    # Check if DDEV project is running without starting it
+    if is_ddev_project_running >/dev/null 2>&1; then
+        debug "DDEV is running - deleting cache via container"
+        ddev exec rm -rf var/cache/dev* var/cache/prod*
+    else
+        debug "DDEV is not running - deleting cache locally"
+        
+        # Try to delete cache without starting DDEV
+        if [[ -d "var/cache" ]]; then
+            info "Deleting cache files locally (DDEV not running)..."
+            rm -rf var/cache/dev* var/cache/prod* 2>/dev/null || true
+            info "Cache files deleted locally"
+        elif [[ -d "cache" ]]; then
+            info "Deleting cache files locally (DDEV not running)..."
+            rm -rf cache/* 2>/dev/null || true
+            info "Cache files deleted locally"
+        else
+            warn "No cache directory found and DDEV not running"
+            info "To delete application cache, start DDEV first: dev start"
+            return 1
+        fi
+    fi
+}
+
+_execute_composer_smart_command() {
+    debug "Running composer command (smart execution): $composerparam"
+    
+    # Check if composer is available locally
+    if command -v composer >/dev/null 2>&1; then
+        debug "Local composer found - executing locally"
+        info "Running composer $composerparam locally..."
+        composer "$composerparam"
+    elif is_ddev_project_running >/dev/null 2>&1; then
+        debug "DDEV is running - executing composer via container"
+        ddev composer "$composerparam"
+    else
+        warn "Neither local composer nor DDEV is available"
+        info "Options:"
+        info "  - Install composer locally: https://getcomposer.org/download/"
+        info "  - Start DDEV: dev start"
+        return 1
+    fi
+}
+
+_execute_composer_smart_require_command() {
+    debug "Adding package (smart execution): $composerparam"
+    
+    # Check if composer is available locally
+    if command -v composer >/dev/null 2>&1; then
+        debug "Local composer found - executing locally"
+        info "Adding package $composerparam locally..."
+        composer require "$composerparam"
+    elif is_ddev_project_running >/dev/null 2>&1; then
+        debug "DDEV is running - executing composer via container"
+        ddev composer require "$composerparam"
+    else
+        warn "Neither local composer nor DDEV is available"
+        info "Options:"
+        info "  - Install composer locally: https://getcomposer.org/download/"
+        info "  - Start DDEV: dev start"
+        return 1
+    fi
+}
+
+_execute_composer_smart_remove_command() {
+    debug "Removing package (smart execution): $composerparam"
+    
+    # Check if composer is available locally
+    if command -v composer >/dev/null 2>&1; then
+        debug "Local composer found - executing locally"
+        info "Removing package $composerparam locally..."
+        composer remove "$composerparam"
+    elif is_ddev_project_running >/dev/null 2>&1; then
+        debug "DDEV is running - executing composer via container"
+        ddev composer remove "$composerparam"
+    else
+        warn "Neither local composer nor DDEV is available"
+        info "Options:"
+        info "  - Install composer locally: https://getcomposer.org/download/"
+        info "  - Start DDEV: dev start"
+        return 1
     fi
 }
 
