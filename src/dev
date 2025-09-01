@@ -6,13 +6,13 @@
 #
 # Description: dDEV shortening tools
 # Usage: dev [OPTIONS] [PARAMETERS]
-# Version: 1.4.1
+# Version: 1.4.2
 # https://github.com/akaw/dev-cli-tools/
 #
 # shellcheck disable=SC2034,SC2168,SC2317
 
 # Default Configuration
-VERSION="1.4.1"
+VERSION="1.4.2"
 DOCKER_ENVIRONMENT="${DOCKER_ENVIRONMENT:-orbstack}"
 BACKUP_DIR="${BACKUP_DIR:-.project/backups}"
 DB_EXPORT_FILE="${DB_EXPORT_FILE:-.project/db.sql.gz}"
@@ -1407,33 +1407,52 @@ setup_config() {
 
 # Check if this might be the first run after system restart
 is_likely_first_run_after_restart() {
-    # Check system uptime (if available)
+    # Check system uptime (if available) - extended time window
     if command -v uptime >/dev/null 2>&1; then
         local uptime_minutes
+        # Try different uptime formats (macOS, Linux)
         if uptime_minutes=$(uptime | grep -o 'up [0-9]* min' | grep -o '[0-9]*' 2>/dev/null); then
-            # If system has been up for less than 10 minutes, likely first run
-            if [[ -n "$uptime_minutes" && "$uptime_minutes" -lt 10 ]]; then
-                debug "System uptime: ${uptime_minutes} minutes - likely first run after restart"
+            # If system has been up for less than 15 minutes, likely first run
+            if [[ -n "$uptime_minutes" && "$uptime_minutes" -lt 15 ]]; then
+                debug "System uptime: ${uptime_minutes} minutes - first run after restart"
                 return 0
             fi
+        elif uptime | grep -q "up.*day" 2>/dev/null; then
+            # System has been up for days - definitely not first run
+            debug "System uptime: multiple days - not first run after restart"
+            return 1
+        elif uptime | grep -q "up.*hr" 2>/dev/null; then
+            # System has been up for hours - probably not first run
+            debug "System uptime: multiple hours - not first run after restart"
+            return 1
         fi
+    fi
+    
+    # Check if this is the first dev command today
+    local first_run_marker
+    first_run_marker="/tmp/dev_first_run_$(date +%Y%m%d)"
+    if [[ ! -f "$first_run_marker" ]]; then
+        debug "No first run marker found for today - treating as first run"
+        touch "$first_run_marker" 2>/dev/null || true
+        return 0
     fi
     
     # Check if Docker was recently started (container creation times)
-    if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
+    if command -v docker >/dev/null 2>&1 && timeout 3 docker info >/dev/null 2>&1; then
         local recent_containers
-        if recent_containers=$(docker ps -a --format "table {{.CreatedAt}}" --filter "since=10m" 2>/dev/null | wc -l 2>/dev/null); then
+        if recent_containers=$(timeout 3 docker ps -a --format "table {{.CreatedAt}}" --filter "since=15m" 2>/dev/null | wc -l 2>/dev/null); then
             if [[ "$recent_containers" -lt 3 ]]; then
-                debug "Few recent Docker containers - might be first run after restart"
+                debug "Few recent Docker containers ($recent_containers) - might be first run after restart"
                 return 0
             fi
         fi
     fi
     
+    debug "Not first run after restart - normal operation"
     return 1
 }
 
-# Function to check for updates (non-blocking)
+# Function to check for updates (only on first run after restart)
 check_for_updates() {
     # Skip update check in test mode
     if [[ "${DEV_TEST_MODE:-}" == "true" ]]; then
@@ -1449,17 +1468,17 @@ check_for_updates() {
         return 0
     fi
 
-    # Skip update check if this looks like first run after restart
-    if is_likely_first_run_after_restart; then
-        debug "Skipping update check - appears to be first run after system restart"
+    # Only check for updates if this looks like first run after restart
+    if ! is_likely_first_run_after_restart; then
+        debug "Skipping update check - not first run after system restart"
         return 0
     fi
 
-    debug "Checking for updates (non-blocking)..."
+    debug "First run after restart detected - checking for updates..."
 
-    # Try to get the latest version from GitHub with shorter timeout and background check
+    # Try to get the latest version from GitHub with reasonable timeout
     local latest_version
-    if ! latest_version=$(timeout 2 curl -s -m 2 "https://raw.githubusercontent.com/akaw/dev-cli-tools/main/src/dev" 2>/dev/null | grep -m 1 "^VERSION=" | cut -d'"' -f2 2>/dev/null); then
+    if ! latest_version=$(timeout 5 curl -s -m 5 "https://raw.githubusercontent.com/akaw/dev-cli-tools/main/src/dev" 2>/dev/null | grep -m 1 "^VERSION=" | cut -d'"' -f2 2>/dev/null); then
         debug "Could not check for updates (network timeout or unavailable)"
         # Don't create marker on failure, allow retry next time
         return 0
@@ -1472,10 +1491,12 @@ check_for_updates() {
 
     # Compare versions (simple string comparison, assumes semantic versioning)
     if [[ "$latest_version" != "$VERSION" && -n "$latest_version" ]]; then
-        info "A new version ($latest_version) of dev-cli-tools is available!"
+        info "🔄 A new version ($latest_version) of dev-cli-tools is available!"
         info "You're currently using version $VERSION."
         info "Run 'dev upgrade' to update to the latest version."
         echo ""
+    else
+        debug "You have the latest version ($VERSION)"
     fi
 
     return 0
@@ -1644,7 +1665,7 @@ main() {
         debug "Docker environment: ${DOCKER_ENVIRONMENT:-not set}"
     fi
 
-    # Check for updates (skip on first run after restart to improve startup time)
+    # Check for updates (only on first run after restart when network is likely stable)
     if [[ "${SKIP_UPDATE_CHECK:-}" != "true" ]]; then
         check_for_updates
     else
