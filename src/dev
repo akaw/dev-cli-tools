@@ -6,13 +6,13 @@
 #
 # Description: dDEV shortening tools
 # Usage: dev [OPTIONS] [PARAMETERS]
-# Version: 1.4.2
+# Version: 1.4.3
 # https://github.com/akaw/dev-cli-tools/
 #
 # shellcheck disable=SC2034,SC2168,SC2317
 
 # Default Configuration
-VERSION="1.4.2"
+VERSION="1.4.3"
 DOCKER_ENVIRONMENT="${DOCKER_ENVIRONMENT:-orbstack}"
 BACKUP_DIR="${BACKUP_DIR:-.project/backups}"
 DB_EXPORT_FILE="${DB_EXPORT_FILE:-.project/db.sql.gz}"
@@ -729,7 +729,7 @@ EOF
     exit 0
 }
 
-# Simple versioning and message outpu
+# Simple versioning and message output
 version() {
     echo -e "dev-cli-tools ${VERSION}\nhttps://github.com/akaw/dev-cli-tools/"
     exit 0
@@ -831,7 +831,7 @@ cleanup_expired_cache() {
     done
 }
 
-# Simplified color outpu
+# Simplified color output
 setup_colors() {
     NOFORMAT='\033[0m'
     RED='\033[0;31m'
@@ -839,7 +839,7 @@ setup_colors() {
     YELLOW='\033[1;33m'
 }
 
-# Simple message outpu
+# Simple message output
 msg() {
     echo "$1"
 }
@@ -872,7 +872,7 @@ default() {
     fi
 }
 
-# Function to upgrade the scrip
+# Function to upgrade the script
 upgrade() {
     local script_path="${BASH_SOURCE[0]}"
     info "Checking for updates..."
