@@ -6,13 +6,13 @@
 #
 # Description: dDEV shortening tools
 # Usage: dev [OPTIONS] [PARAMETERS]
-# Version: 1.4.3
+# Version: 1.5.0
 # https://github.com/akaw/dev-cli-tools/
 #
 # shellcheck disable=SC2034,SC2168,SC2317
 
 # Default Configuration
-VERSION="1.4.3"
+VERSION="1.5.0"
 DOCKER_ENVIRONMENT="${DOCKER_ENVIRONMENT:-orbstack}"
 BACKUP_DIR="${BACKUP_DIR:-.project/backups}"
 DB_EXPORT_FILE="${DB_EXPORT_FILE:-.project/db.sql.gz}"
@@ -555,6 +555,66 @@ handle_script_setup() {
     exit 0
 }
 
+# Configuration management handlers
+handle_config_command() {
+    local action="${1:-show}"
+    shift
+    
+    case "$action" in
+        "show"|"list"|"ls")
+            config_show
+            ;;
+        "validate"|"check"|"val")
+            config_validate
+            ;;
+        "reset")
+            config_reset "$@"
+            ;;
+        "set")
+            config_set "$@"
+            ;;
+        "get")
+            config_get "$@"
+            ;;
+        *)
+            warn "Unknown config action: $action"
+            info "Available actions: show, validate, reset, set, get"
+            return 1
+            ;;
+    esac
+    exit 0
+}
+
+handle_config_show() {
+    debug "Showing configuration..."
+    config_show
+    exit 0
+}
+
+handle_config_validate() {
+    debug "Validating configuration..."
+    config_validate
+    exit $?
+}
+
+handle_config_reset() {
+    debug "Resetting configuration..."
+    config_reset "$@"
+    exit 0
+}
+
+handle_config_set() {
+    debug "Setting configuration value..."
+    config_set "$@"
+    exit $?
+}
+
+handle_config_get() {
+    debug "Getting configuration value..."
+    config_get "$@"
+    exit $?
+}
+
 handle_unknown_command() {
     local command="$1"
     shift
@@ -634,6 +694,14 @@ init_command_registry() {
     # System commands
     register_command "upgrade" "handle_script_upgrade" "Upgrade script" "" ""
     register_command "setup" "handle_script_setup" "Run configuration wizard" "" ""
+    
+    # Configuration management commands
+    register_command "config" "handle_config_command" "Configuration management" "cfg" "[action]"
+    register_command "config:show" "handle_config_show" "Show current configuration" "cfg:show" ""
+    register_command "config:validate" "handle_config_validate" "Validate configuration" "cfg:val" ""
+    register_command "config:reset" "handle_config_reset" "Reset configuration" "cfg:reset" "[key]"
+    register_command "config:set" "handle_config_set" "Set configuration value" "cfg:set" "<key> <value>"
+    register_command "config:get" "handle_config_get" "Get configuration value" "cfg:get" "<key>"
     
     debug "Command registry initialized with ${#COMMAND_REGISTRY[@]} commands"
 }
@@ -1007,7 +1075,7 @@ upgrade() {
         local new_version
         if new_version=$(grep -m 1 "^VERSION=" "$script_path" | cut -d'"' -f2); then
             VERSION="$new_version"
-            info "New version: ${VERSION}"
+        info "New version: ${VERSION}"
         else
             warn "Could not determine new version from updated script"
         fi
@@ -1188,11 +1256,11 @@ bin/build-administration.sh
 EOL
         chmod +x .project/scripts/build-all.sh
         ;;
-            *)
+    *)
             handle_error "Unsupported project type: $project_type" "project structure creation"
             info "Supported project types: symfony, shopware"
             return 1
-            ;;
+        ;;
     esac
 
     # Create gitignore if it doesn't exis
@@ -1265,7 +1333,93 @@ EOL
     return 0
 }
 
-# Load configuration from file
+# Modern configuration management with JSON support and validation
+declare -A CONFIG_SCHEMA=(
+    ["DOCKER_ENVIRONMENT"]="orbstack|docker"
+    ["PREFERRED_EDITOR"]="string"
+    ["DEFAULT_PHP_VERSION"]="version"
+    ["DEFAULT_NODE_VERSION"]="version"
+    ["DEFAULT_MYSQL_VERSION"]="version"
+    ["LOG_LEVEL"]="INFO|DEBUG|WARN|ERROR"
+    ["BACKUP_DIR"]="path"
+    ["DB_EXPORT_FILE"]="path"
+    ["AUTO_UPDATE_CHECK"]="true|false"
+    ["CACHE_TTL"]="number"
+)
+
+declare -A CONFIG_DEFAULTS=(
+    ["DOCKER_ENVIRONMENT"]="orbstack"
+    ["PREFERRED_EDITOR"]=""
+    ["DEFAULT_PHP_VERSION"]="8.2"
+    ["DEFAULT_NODE_VERSION"]="20"
+    ["DEFAULT_MYSQL_VERSION"]="8.0"
+    ["LOG_LEVEL"]="INFO"
+    ["BACKUP_DIR"]=".project/backups"
+    ["DB_EXPORT_FILE"]=".project/db.sql.gz"
+    ["AUTO_UPDATE_CHECK"]="true"
+    ["CACHE_TTL"]="30"
+)
+
+# Validate configuration value against schema
+validate_config_value() {
+    local key="$1"
+    local value="$2"
+    local schema="${CONFIG_SCHEMA[$key]:-}"
+    
+    if [[ -z "$schema" ]]; then
+        debug "No schema defined for config key: $key"
+        return 0
+    fi
+    
+    case "$schema" in
+        *"|"*)
+            # Enum validation
+            if [[ "|$schema|" == *"|$value|"* ]]; then
+                return 0
+            else
+                warn "Invalid value '$value' for $key. Valid options: $schema"
+                return 1
+            fi
+            ;;
+        "string")
+            # Any string is valid
+            return 0
+            ;;
+        "version")
+            # Validate version format (x.y or x.y.z or just x for major versions)
+            if [[ "$value" =~ ^[0-9]+(\.[0-9]+)?(\.[0-9]+)?$ ]]; then
+                return 0
+            else
+                warn "Invalid version format '$value' for $key. Expected format: x, x.y or x.y.z"
+                return 1
+            fi
+            ;;
+        "path")
+            # Basic path validation (no empty, no spaces at start/end)
+            if [[ -n "$value" && "$value" == "${value# }" && "$value" == "${value% }" ]]; then
+                return 0
+            else
+                warn "Invalid path '$value' for $key"
+                return 1
+            fi
+            ;;
+        "number")
+            # Validate positive integer
+            if [[ "$value" =~ ^[0-9]+$ ]]; then
+                return 0
+            else
+                warn "Invalid number '$value' for $key. Expected positive integer"
+                return 1
+            fi
+            ;;
+        *)
+            debug "Unknown schema type: $schema"
+            return 0
+            ;;
+    esac
+}
+
+# Load configuration from file with validation and fallback
 load_config() {
     # Skip if we're in test mode
     if [[ "${DEV_TEST_MODE:-}" == "true" ]]; then
@@ -1273,53 +1427,373 @@ load_config() {
         return 0
     fi
 
-    if [[ -f "$CONFIG_FILE" && -r "$CONFIG_FILE" ]]; then
+    # Load defaults first
+    debug "Loading default configuration values"
+    for key in "${!CONFIG_DEFAULTS[@]}"; do
+        declare -g "$key"="${CONFIG_DEFAULTS[$key]}"
+    done
+
+    # Try to load from config file (prefer JSON format)
+    local json_config="${CONFIG_FILE%.conf}.json"
+    local shell_config="${CONFIG_FILE%.json}.conf"
+    
+    if [[ -f "$json_config" && -r "$json_config" ]] && command -v jq >/dev/null 2>&1; then
+        debug "Loading JSON configuration from $json_config"
+        CONFIG_FILE="$json_config"
+        load_json_config
+    elif [[ -f "$shell_config" && -r "$shell_config" ]]; then
+        debug "Loading shell configuration from $shell_config"
+        CONFIG_FILE="$shell_config"
+        load_shell_config
+    elif [[ -f "$CONFIG_FILE" && -r "$CONFIG_FILE" ]]; then
         debug "Loading configuration from $CONFIG_FILE"
-        # shellcheck source=/dev/null
-        source "$CONFIG_FILE"
-        return 0
+        # Check if it's a JSON file (new format)
+        if [[ "$CONFIG_FILE" == *.json ]] && command -v jq >/dev/null 2>&1; then
+            load_json_config
+        else
+            # Load legacy shell format
+            load_shell_config
+        fi
     else
-        debug "No configuration file found at $CONFIG_FILE or file not readable"
+        debug "No configuration file found, using defaults"
         return 1
+    fi
+    
+    # Validate loaded configuration
+    validate_loaded_config
+    return 0
+}
+
+# Load JSON configuration format
+load_json_config() {
+    debug "Loading JSON configuration format"
+    
+    if ! jq empty "$CONFIG_FILE" 2>/dev/null; then
+        warn "Invalid JSON in config file: $CONFIG_FILE"
+        return 1
+    fi
+    
+    # Extract each configuration value
+    for key in "${!CONFIG_DEFAULTS[@]}"; do
+        local value
+        value=$(jq -r ".$key // empty" "$CONFIG_FILE" 2>/dev/null)
+        if [[ -n "$value" && "$value" != "null" ]]; then
+            if validate_config_value "$key" "$value"; then
+                declare -g "$key"="$value"
+                debug "Loaded $key=$value from JSON config"
+            fi
+        fi
+    done
+}
+
+# Load legacy shell configuration format
+load_shell_config() {
+    debug "Loading legacy shell configuration format"
+    
+    # Create a temporary file to validate the config
+    local temp_config
+    temp_config=$(mktemp)
+    
+    # Only source lines that match our expected pattern
+    grep -E "^export [A-Z_]+=" "$CONFIG_FILE" > "$temp_config" 2>/dev/null || true
+    
+    if [[ -s "$temp_config" ]]; then
+        # shellcheck source=/dev/null
+        source "$temp_config"
+        debug "Loaded legacy configuration from $CONFIG_FILE"
+    fi
+    
+    rm -f "$temp_config"
+}
+
+# Validate all loaded configuration values
+validate_loaded_config() {
+    local invalid_count=0
+    
+    for key in "${!CONFIG_DEFAULTS[@]}"; do
+        local value="${!key}"
+        if ! validate_config_value "$key" "$value"; then
+            warn "Resetting $key to default value: ${CONFIG_DEFAULTS[$key]}"
+            declare -g "$key"="${CONFIG_DEFAULTS[$key]}"
+            ((invalid_count++))
+        fi
+    done
+    
+    if [[ $invalid_count -gt 0 ]]; then
+        warn "Found $invalid_count invalid configuration values, reset to defaults"
+        info "Run 'dev setup' to reconfigure or 'dev config validate' to check your settings"
     fi
 }
 
-# Save configuration to file
+# Save configuration to file with backup and format selection
 save_config() {
-    debug "Saving configuration to $CONFIG_FILE"
+    local format="${1:-auto}"
+    debug "Saving configuration to $CONFIG_FILE (format: $format)"
 
-    # Create directory if it doesn't exis
+    # Create directory if it doesn't exist
     mkdir -p "$(dirname "$CONFIG_FILE")"
 
-    # Clear existing file
-    true > "$CONFIG_FILE"
+    # Create backup if file exists
+    if [[ -f "$CONFIG_FILE" ]]; then
+        local backup_file
+        backup_file="${CONFIG_FILE}.backup.$(date +%Y%m%d_%H%M%S)"
+        cp "$CONFIG_FILE" "$backup_file"
+        debug "Created backup: $backup_file"
+    fi
 
-    # Write configuration values
-    echo "# DEV CLI Tools Configuration" > "$CONFIG_FILE"
-    echo "# Generated on $(date)" >> "$CONFIG_FILE"
-    echo "" >> "$CONFIG_FILE"
-
-    [[ -n "$DOCKER_ENVIRONMENT" ]] && echo "export DOCKER_ENVIRONMENT=\"$DOCKER_ENVIRONMENT\"" >> "$CONFIG_FILE"
-    [[ -n "$PREFERRED_EDITOR" ]] && echo "export PREFERRED_EDITOR=\"$PREFERRED_EDITOR\"" >> "$CONFIG_FILE"
-    [[ -n "$DEFAULT_PHP_VERSION" ]] && echo "export DEFAULT_PHP_VERSION=\"$DEFAULT_PHP_VERSION\"" >> "$CONFIG_FILE"
-    [[ -n "$DEFAULT_NODE_VERSION" ]] && echo "export DEFAULT_NODE_VERSION=\"$DEFAULT_NODE_VERSION\"" >> "$CONFIG_FILE"
-    [[ -n "$DEFAULT_MYSQL_VERSION" ]] && echo "export DEFAULT_MYSQL_VERSION=\"$DEFAULT_MYSQL_VERSION\"" >> "$CONFIG_FILE"
-    [[ -n "$LOG_LEVEL" ]] && echo "export LOG_LEVEL=\"$LOG_LEVEL\"" >> "$CONFIG_FILE"
+    # Determine format
+    case "$format" in
+        "json")
+            save_json_config
+            ;;
+        "shell"|"legacy")
+            save_shell_config
+            ;;
+        "auto")
+            # Use JSON if jq is available, otherwise shell format
+            if command -v jq >/dev/null 2>&1; then
+                save_json_config
+            else
+                save_shell_config
+            fi
+            ;;
+        *)
+            warn "Unknown config format: $format, using auto-detection"
+            save_config "auto"
+            return $?
+            ;;
+    esac
 
     info "Configuration saved to $CONFIG_FILE"
 }
 
-# Setup configuration
+# Save configuration in JSON format
+save_json_config() {
+    debug "Saving configuration in JSON format"
+    
+    # Ensure we have a .json extension
+    if [[ "$CONFIG_FILE" != *.json ]]; then
+        CONFIG_FILE="${CONFIG_FILE%.conf}.json"
+    fi
+    
+    # Create JSON configuration with proper formatting
+    {
+        echo "{"
+        echo "  \"_metadata\": {"
+        echo "    \"version\": \"$VERSION\","
+        echo "    \"generated\": \"$(date -Iseconds)\","
+        echo "    \"format\": \"json\""
+        echo "  },"
+        
+        # Add configuration values
+        local config_entries=()
+        for key in "${!CONFIG_DEFAULTS[@]}"; do
+            local value="${!key}"
+            if [[ -n "$value" ]]; then
+                # Handle boolean values
+                if [[ "$value" == "true" || "$value" == "false" ]]; then
+                    config_entries+=("  \"$key\": $value")
+                else
+                    config_entries+=("  \"$key\": \"$value\"")
+                fi
+            fi
+        done
+        
+        # Join entries with commas
+        local entry_count=${#config_entries[@]}
+        for ((i=0; i<entry_count; i++)); do
+            echo -n "${config_entries[i]}"
+            if [[ $i -lt $((entry_count-1)) ]]; then
+                echo ","
+            else
+                echo ""
+            fi
+        done
+        
+        echo "}"
+    } > "$CONFIG_FILE"
+}
+
+# Save configuration in legacy shell format
+save_shell_config() {
+    debug "Saving configuration in shell format"
+    
+    # Ensure we have a .conf extension
+    if [[ "$CONFIG_FILE" == *.json ]]; then
+        CONFIG_FILE="${CONFIG_FILE%.json}.conf"
+    fi
+
+    # Write configuration values
+    cat > "$CONFIG_FILE" <<EOF
+# DEV CLI Tools Configuration
+# Generated on $(date)
+# Version: $VERSION
+# Format: shell
+
+EOF
+
+    for key in "${!CONFIG_DEFAULTS[@]}"; do
+        local value="${!key}"
+        if [[ -n "$value" ]]; then
+            echo "export $key=\"$value\"" >> "$CONFIG_FILE"
+        fi
+    done
+}
+
+# Configuration management commands
+config_show() {
+    info "Current DEV CLI Tools Configuration:"
+    echo ""
+    
+    printf "%-25s %-20s %s\n" "Setting" "Current Value" "Default"
+    printf "%-25s %-20s %s\n" "-------" "-------------" "-------"
+    
+    for key in "${!CONFIG_DEFAULTS[@]}"; do
+        local current_value="${!key}"
+        local default_value="${CONFIG_DEFAULTS[$key]}"
+        
+        # Highlight if different from default
+        if [[ "$current_value" != "$default_value" ]]; then
+            printf "%-25s ${YELLOW}%-20s${NOFORMAT} %s\n" "$key" "$current_value" "$default_value"
+        else
+            printf "%-25s %-20s %s\n" "$key" "$current_value" "$default_value"
+        fi
+    done
+    
+    echo ""
+    info "Configuration file: $CONFIG_FILE"
+    if [[ -f "$CONFIG_FILE" ]]; then
+        info "Last modified: $(date -r "$CONFIG_FILE" 2>/dev/null || stat -c %y "$CONFIG_FILE" 2>/dev/null || echo "unknown")"
+    else
+        warn "Configuration file does not exist (using defaults)"
+    fi
+}
+
+config_validate() {
+    info "Validating configuration..."
+    local errors=0
+    
+    for key in "${!CONFIG_DEFAULTS[@]}"; do
+        local value="${!key}"
+        if ! validate_config_value "$key" "$value"; then
+            ((errors++))
+        else
+            debug "✓ $key: $value"
+        fi
+    done
+    
+    if [[ $errors -eq 0 ]]; then
+        info "✅ Configuration is valid"
+        return 0
+    else
+        warn "❌ Found $errors configuration errors"
+        info "Run 'dev setup' to fix configuration issues"
+        return 1
+    fi
+}
+
+config_reset() {
+    local key="${1:-}"
+    
+    if [[ -n "$key" ]]; then
+        # Reset specific key
+        if [[ -n "${CONFIG_DEFAULTS[$key]:-}" ]]; then
+            declare -g "$key"="${CONFIG_DEFAULTS[$key]}"
+            info "Reset $key to default value: ${CONFIG_DEFAULTS[$key]}"
+            save_config
+        else
+            warn "Unknown configuration key: $key"
+            return 1
+        fi
+    else
+        # Reset all configuration
+        info "Resetting all configuration to defaults..."
+        for key in "${!CONFIG_DEFAULTS[@]}"; do
+            declare -g "$key"="${CONFIG_DEFAULTS[$key]}"
+        done
+        save_config
+        info "All configuration reset to defaults"
+    fi
+}
+
+config_set() {
+    local key="$1"
+    local value="$2"
+    
+    if [[ -z "$key" || -z "$value" ]]; then
+        warn "Usage: dev config set <key> <value>"
+        return 1
+    fi
+    
+    if [[ -z "${CONFIG_DEFAULTS[$key]:-}" ]]; then
+        warn "Unknown configuration key: $key"
+        info "Available keys: ${!CONFIG_DEFAULTS[*]}"
+        return 1
+    fi
+    
+    if validate_config_value "$key" "$value"; then
+        declare -g "$key"="$value"
+        save_config
+        info "Set $key = $value"
+    else
+        warn "Invalid value for $key: $value"
+        return 1
+    fi
+}
+
+config_get() {
+    local key="$1"
+    
+    if [[ -z "$key" ]]; then
+        warn "Usage: dev config get <key>"
+        return 1
+    fi
+    
+    if [[ -z "${CONFIG_DEFAULTS[$key]:-}" ]]; then
+        warn "Unknown configuration key: $key"
+        return 1
+    fi
+    
+    local value="${!key}"
+    echo "$value"
+}
+
+# Enhanced setup configuration with validation and modern features
 setup_config() {
-    info "Welcome to DEV CLI Tools Setup"
-    info "This will configure your preferences for DEV CLI Tools"
+    info "🚀 Welcome to DEV CLI Tools Setup v${VERSION}"
+    info "This wizard will configure your preferences for optimal development experience"
     echo ""
 
-    # Docker environmen
-    echo "Select your preferred Docker environment:"
+    # Show current configuration if exists
+    if [[ -f "$CONFIG_FILE" ]]; then
+        info "📋 Current configuration found at: $CONFIG_FILE"
+        read -r -p "Would you like to see current settings before continuing? [y/N]: " show_current
+        if [[ "${show_current,,}" == "y" ]]; then
+            echo ""
+            config_show
+            echo ""
+        fi
+    fi
+
+    # Docker environment with auto-detection
+    echo "🐳 Docker Environment Configuration"
     echo "1) OrbStack (recommended for macOS)"
     echo "2) Docker Desktop"
     echo "3) Native Docker (Linux)"
+    
+    # Try to detect current environment
+    local detected_env=""
+    if command -v orbctl >/dev/null 2>&1; then
+        detected_env="OrbStack detected"
+    elif [[ -f "/Applications/Docker.app/Contents/MacOS/Docker" ]]; then
+        detected_env="Docker Desktop detected"
+    elif command -v docker >/dev/null 2>&1; then
+        detected_env="Docker detected"
+    fi
+    
+    if [[ -n "$detected_env" ]]; then
+        echo "   ($detected_env)"
+    fi
     echo ""
     read -r -p "Enter your choice [1-3, default: 1]: " docker_choice
 
@@ -1330,19 +1804,31 @@ setup_config() {
         *) DOCKER_ENVIRONMENT="orbstack" ;;
     esac
 
-    echo ""
-    echo "Docker environment set to: $DOCKER_ENVIRONMENT"
+    echo "✅ Docker environment set to: $DOCKER_ENVIRONMENT"
     echo ""
 
-    # Preferred editor
-    echo "Select your preferred code editor:"
+    # Preferred editor with auto-detection
+    echo "📝 Code Editor Configuration"
     echo "1) No default editor"
     echo "2) Visual Studio Code (code)"
     echo "3) PhpStorm (phpstorm)"
     echo "4) Sublime Text (subl)"
-    echo "5) Custom (specify command)"
+    echo "5) Vim/Neovim (vim/nvim)"
+    echo "6) Custom (specify command)"
+    
+    # Try to detect available editors
+    local available_editors=()
+    command -v code >/dev/null 2>&1 && available_editors+=("VS Code")
+    command -v phpstorm >/dev/null 2>&1 && available_editors+=("PhpStorm")
+    command -v subl >/dev/null 2>&1 && available_editors+=("Sublime")
+    command -v vim >/dev/null 2>&1 && available_editors+=("Vim")
+    command -v nvim >/dev/null 2>&1 && available_editors+=("Neovim")
+    
+    if [[ ${#available_editors[@]} -gt 0 ]]; then
+        echo "   (Available: ${available_editors[*]})"
+    fi
     echo ""
-    read -r -p "Enter your choice [1-5, default: 1]: " editor_choice
+    read -r -p "Enter your choice [1-6, default: 1]: " editor_choice
 
     case "${editor_choice:-1}" in
         1) PREFERRED_EDITOR="" ;;
@@ -1350,6 +1836,13 @@ setup_config() {
         3) PREFERRED_EDITOR="phpstorm" ;;
         4) PREFERRED_EDITOR="subl" ;;
         5)
+            if command -v nvim >/dev/null 2>&1; then
+                PREFERRED_EDITOR="nvim"
+            else
+                PREFERRED_EDITOR="vim"
+            fi
+            ;;
+        6)
             read -r -p "Enter the command to open your editor: " custom_editor
             PREFERRED_EDITOR="$custom_editor"
             ;;
@@ -1357,51 +1850,129 @@ setup_config() {
     esac
 
     if [[ -n "$PREFERRED_EDITOR" ]]; then
-        echo "Preferred editor set to: $PREFERRED_EDITOR"
+        echo "✅ Preferred editor set to: $PREFERRED_EDITOR"
     else
-        echo "No default editor set"
+        echo "✅ No default editor set"
     fi
     echo ""
 
-    # Default PHP version
-    read -r -p "Enter default PHP version [default: 8.2]: " php_version
-    DEFAULT_PHP_VERSION="${php_version:-8.2}"
-    echo "Default PHP version set to: $DEFAULT_PHP_VERSION"
+    # Version configurations with validation
+    echo "🔧 Development Environment Versions"
+    
+    # PHP version
+    while true; do
+        read -r -p "Enter default PHP version [current: ${DEFAULT_PHP_VERSION}]: " php_version
+        php_version="${php_version:-$DEFAULT_PHP_VERSION}"
+        if validate_config_value "DEFAULT_PHP_VERSION" "$php_version"; then
+            DEFAULT_PHP_VERSION="$php_version"
+            echo "✅ PHP version set to: $DEFAULT_PHP_VERSION"
+            break
+        fi
+    done
     echo ""
 
-    # Default Node.js version
-    read -r -p "Enter default Node.js version [default: 20]: " node_version
-    DEFAULT_NODE_VERSION="${node_version:-20}"
-    echo "Default Node.js version set to: $DEFAULT_NODE_VERSION"
+    # Node.js version
+    while true; do
+        read -r -p "Enter default Node.js version [current: ${DEFAULT_NODE_VERSION}]: " node_version
+        node_version="${node_version:-$DEFAULT_NODE_VERSION}"
+        if validate_config_value "DEFAULT_NODE_VERSION" "$node_version"; then
+            DEFAULT_NODE_VERSION="$node_version"
+            echo "✅ Node.js version set to: $DEFAULT_NODE_VERSION"
+            break
+        fi
+    done
     echo ""
 
-    # Default MySQL version
-    read -r -p "Enter default MySQL version [default: 8.0]: " mysql_version
-    DEFAULT_MYSQL_VERSION="${mysql_version:-8.0}"
-    echo "Default MySQL version set to: $DEFAULT_MYSQL_VERSION"
+    # MySQL version
+    while true; do
+        read -r -p "Enter default MySQL version [current: ${DEFAULT_MYSQL_VERSION}]: " mysql_version
+        mysql_version="${mysql_version:-$DEFAULT_MYSQL_VERSION}"
+        if validate_config_value "DEFAULT_MYSQL_VERSION" "$mysql_version"; then
+            DEFAULT_MYSQL_VERSION="$mysql_version"
+            echo "✅ MySQL version set to: $DEFAULT_MYSQL_VERSION"
+            break
+        fi
+    done
     echo ""
+
+    # Advanced settings
+    echo "⚙️  Advanced Configuration"
 
     # Log level
     echo "Select log level:"
     echo "1) INFO (standard level, recommended)"
     echo "2) DEBUG (verbose output for troubleshooting)"
+    echo "3) WARN (warnings and errors only)"
+    echo "4) ERROR (errors only)"
     echo ""
-    read -r -p "Enter your choice [1-2, default: 1]: " log_level_choice
+    read -r -p "Enter your choice [1-4, default: 1]: " log_level_choice
 
     case "${log_level_choice:-1}" in
         1) LOG_LEVEL="INFO" ;;
         2) LOG_LEVEL="DEBUG" ;;
+        3) LOG_LEVEL="WARN" ;;
+        4) LOG_LEVEL="ERROR" ;;
         *) LOG_LEVEL="INFO" ;;
     esac
-
-    echo "Log level set to: $LOG_LEVEL"
+    echo "✅ Log level set to: $LOG_LEVEL"
     echo ""
 
-    # Save configuration
-    save_config
+    # Auto update check
+    read -r -p "Enable automatic update checks? [Y/n]: " auto_update
+    case "${auto_update,,}" in
+        "n"|"no"|"false") AUTO_UPDATE_CHECK="false" ;;
+        *) AUTO_UPDATE_CHECK="true" ;;
+    esac
+    echo "✅ Auto update check: $AUTO_UPDATE_CHECK"
+    echo ""
 
-    info "Setup complete! Your preferences have been saved."
-    info "You can change these settings any time by running 'dev setup' again."
+    # Cache TTL
+    read -r -p "Cache TTL in seconds [current: ${CACHE_TTL}]: " cache_ttl
+    cache_ttl="${cache_ttl:-$CACHE_TTL}"
+    if validate_config_value "CACHE_TTL" "$cache_ttl"; then
+        CACHE_TTL="$cache_ttl"
+        echo "✅ Cache TTL set to: $CACHE_TTL seconds"
+    fi
+    echo ""
+
+    # Configuration format selection
+    echo "💾 Configuration Format"
+    if command -v jq >/dev/null 2>&1; then
+        echo "1) JSON (modern, structured, recommended)"
+        echo "2) Shell (legacy, compatible)"
+        echo ""
+        read -r -p "Select format [1-2, default: 1]: " format_choice
+        case "${format_choice:-1}" in
+            1) config_format="json" ;;
+            2) config_format="shell" ;;
+            *) config_format="json" ;;
+        esac
+    else
+        echo "JSON format requires 'jq' command. Using shell format."
+        config_format="shell"
+    fi
+
+    # Save configuration
+    echo "💾 Saving configuration..."
+    save_config "$config_format"
+
+    # Validate configuration
+    echo ""
+    echo "🔍 Validating configuration..."
+    if config_validate >/dev/null 2>&1; then
+        echo "✅ Configuration validation passed"
+    else
+        warn "⚠️  Configuration validation found issues (but saved anyway)"
+    fi
+
+    echo ""
+    info "🎉 Setup complete! Your preferences have been saved."
+    info "📁 Configuration file: $CONFIG_FILE"
+    info "🔧 You can:"
+    info "   • Run 'dev setup' again to reconfigure"
+    info "   • Use 'dev config show' to view current settings"
+    info "   • Use 'dev config set <key> <value>' for quick changes"
+    info "   • Use 'dev config validate' to check configuration"
     echo ""
 }
 
@@ -1667,7 +2238,7 @@ main() {
 
     # Check for updates (only on first run after restart when network is likely stable)
     if [[ "${SKIP_UPDATE_CHECK:-}" != "true" ]]; then
-        check_for_updates
+    check_for_updates
     else
         debug "Update check skipped (SKIP_UPDATE_CHECK=true)"
     fi
