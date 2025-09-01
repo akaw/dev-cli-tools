@@ -6,13 +6,13 @@
 #
 # Description: dDEV shortening tools
 # Usage: dev [OPTIONS] [PARAMETERS]
-# Version: 1.4.0
+# Version: 1.4.1
 # https://github.com/akaw/dev-cli-tools/
 #
 # shellcheck disable=SC2034,SC2168,SC2317
 
 # Default Configuration
-VERSION="1.4.0"
+VERSION="1.4.1"
 DOCKER_ENVIRONMENT="${DOCKER_ENVIRONMENT:-orbstack}"
 BACKUP_DIR="${BACKUP_DIR:-.project/backups}"
 DB_EXPORT_FILE="${DB_EXPORT_FILE:-.project/db.sql.gz}"
@@ -847,16 +847,23 @@ msg() {
 # Default function to start the development environmen
 # This function is called when no arguments are provided
 default() {
-    ensure_docker_environment
-    # Check if DDEV project exists and start i
-    if ddev describe >/dev/null 2>&1; then
+    # Ensure Docker environment is ready with retry logic
+    if ! ensure_docker_environment; then
+        error "Docker environment is not ready. Please start Docker and try again."
+        return 1
+    fi
+    
+    # Check if DDEV project exists and start it with timeout
+    if timeout 10 ddev describe >/dev/null 2>&1; then
         ensure_ddev_project
         ddev describe
         ddev sequelace
         ddev launch
     else
-        warn "No DDEV project found in current directory."
+        warn "No DDEV project found in current directory or DDEV is not responding."
         warn "Use 'ddev config' to initialize a new project or change to a project directory."
+        warn "If this is the first run after system restart, Docker might still be starting up."
+        info "Try running the command again in a few seconds."
     fi
     # Open editor if configured
     if [[ -n "$PREFERRED_EDITOR" ]]; then
@@ -1037,7 +1044,7 @@ check_file_exists() {
     return 0
 }
 
-# Enhanced Docker environment verification
+# Enhanced Docker environment verification with retry logic
 ensure_docker_environment() {
     # Skip docker checks in test mode
     if [[ "${DEV_TEST_MODE:-}" == "true" ]]; then
@@ -1056,20 +1063,42 @@ ensure_docker_environment() {
 
     # Check DDEV version compatibility
     local ddev_version
-    if ddev_version=$(ddev version --json-output 2>/dev/null | grep -o '"DDEV version":"[^"]*"' | cut -d'"' -f4); then
+    if ddev_version=$(timeout 5 ddev version --json-output 2>/dev/null | grep -o '"DDEV version":"[^"]*"' | cut -d'"' -f4); then
         debug "DDEV version: $ddev_version"
     else
-        warn "Could not determine DDEV version"
+        debug "Could not determine DDEV version (might be starting up)"
     fi
 
-    # Check if Docker is running and responsive with timeout
-    if ! timeout 10 docker info >/dev/null 2>&1; then
-        handle_error "Docker is not running or not responsive" "docker environment check"
+    # Check if Docker is running with retry logic for startup scenarios
+    local retry_count=0
+    local max_retries=3
+    local docker_ready=false
+    
+    while [[ $retry_count -lt $max_retries ]]; do
+        debug "Docker check attempt $((retry_count + 1))/$max_retries"
+        
+        # Check if Docker is running and responsive with timeout
+        if timeout 8 docker info >/dev/null 2>&1; then
+            debug "Docker daemon is responsive"
+            docker_ready=true
+            break
+        else
+            debug "Docker not responsive, waiting..."
+            if [[ $retry_count -lt $((max_retries - 1)) ]]; then
+                sleep 2
+            fi
+            ((retry_count++))
+        fi
+    done
+    
+    if [[ "$docker_ready" != "true" ]]; then
+        handle_error "Docker is not running or not responsive after $max_retries attempts" "docker environment check"
         info "Please start your Docker environment (Docker Desktop, OrbStack, etc.) and try again"
         info "Common solutions:"
-        info "  - Start Docker Desktop"
+        info "  - Start Docker Desktop and wait for it to fully initialize"
         info "  - Check if Docker daemon is running"
         info "  - Verify Docker permissions"
+        info "  - After system restart, Docker may take a minute to start"
         return 1
     fi
 
@@ -1376,7 +1405,35 @@ setup_config() {
     echo ""
 }
 
-# Function to check for updates
+# Check if this might be the first run after system restart
+is_likely_first_run_after_restart() {
+    # Check system uptime (if available)
+    if command -v uptime >/dev/null 2>&1; then
+        local uptime_minutes
+        if uptime_minutes=$(uptime | grep -o 'up [0-9]* min' | grep -o '[0-9]*' 2>/dev/null); then
+            # If system has been up for less than 10 minutes, likely first run
+            if [[ -n "$uptime_minutes" && "$uptime_minutes" -lt 10 ]]; then
+                debug "System uptime: ${uptime_minutes} minutes - likely first run after restart"
+                return 0
+            fi
+        fi
+    fi
+    
+    # Check if Docker was recently started (container creation times)
+    if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
+        local recent_containers
+        if recent_containers=$(docker ps -a --format "table {{.CreatedAt}}" --filter "since=10m" 2>/dev/null | wc -l 2>/dev/null); then
+            if [[ "$recent_containers" -lt 3 ]]; then
+                debug "Few recent Docker containers - might be first run after restart"
+                return 0
+            fi
+        fi
+    fi
+    
+    return 1
+}
+
+# Function to check for updates (non-blocking)
 check_for_updates() {
     # Skip update check in test mode
     if [[ "${DEV_TEST_MODE:-}" == "true" ]]; then
@@ -1392,17 +1449,24 @@ check_for_updates() {
         return 0
     fi
 
-    # Create marker to avoid checking again today
-    touch "$update_marker"
-
-    debug "Checking for updates..."
-
-    # Try to get the latest version from GitHub
-    local latest_version
-    if ! latest_version=$(curl -s -m 3 "https://raw.githubusercontent.com/akaw/dev-cli-tools/main/src/dev" | grep -m 1 "^VERSION=" | cut -d'"' -f2); then
-        debug "Could not check for updates, network issue?"
-        return 1
+    # Skip update check if this looks like first run after restart
+    if is_likely_first_run_after_restart; then
+        debug "Skipping update check - appears to be first run after system restart"
+        return 0
     fi
+
+    debug "Checking for updates (non-blocking)..."
+
+    # Try to get the latest version from GitHub with shorter timeout and background check
+    local latest_version
+    if ! latest_version=$(timeout 2 curl -s -m 2 "https://raw.githubusercontent.com/akaw/dev-cli-tools/main/src/dev" 2>/dev/null | grep -m 1 "^VERSION=" | cut -d'"' -f2 2>/dev/null); then
+        debug "Could not check for updates (network timeout or unavailable)"
+        # Don't create marker on failure, allow retry next time
+        return 0
+    fi
+
+    # Create marker only after successful check
+    touch "$update_marker" 2>/dev/null || true
 
     debug "Current version: $VERSION, Latest version: $latest_version"
 
@@ -1580,8 +1644,12 @@ main() {
         debug "Docker environment: ${DOCKER_ENVIRONMENT:-not set}"
     fi
 
-    # Check for updates
-    check_for_updates
+    # Check for updates (skip on first run after restart to improve startup time)
+    if [[ "${SKIP_UPDATE_CHECK:-}" != "true" ]]; then
+        check_for_updates
+    else
+        debug "Update check skipped (SKIP_UPDATE_CHECK=true)"
+    fi
 
     # No arguments provided
     if [ $# -eq 0 ]; then
