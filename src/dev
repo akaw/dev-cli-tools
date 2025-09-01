@@ -6,13 +6,13 @@
 #
 # Description: dDEV shortening tools
 # Usage: dev [OPTIONS] [PARAMETERS]
-# Version: 1.6.0
+# Version: 1.6.1
 # https://github.com/akaw/dev-cli-tools/
 #
 # shellcheck disable=SC2034,SC2168,SC2317
 
 # Default Configuration
-VERSION="1.6.0"
+VERSION="1.6.1"
 DOCKER_ENVIRONMENT="${DOCKER_ENVIRONMENT:-orbstack}"
 BACKUP_DIR="${BACKUP_DIR:-.project/backups}"
 DB_EXPORT_FILE="${DB_EXPORT_FILE:-.project/db.sql.gz}"
@@ -3020,7 +3020,8 @@ _execute_cache_clear_command() {
     debug "Clearing cache (smart execution)..."
     
     # Check if DDEV project is running without starting it
-    if is_ddev_project_running >/dev/null 2>&1; then
+    local project_name
+    if project_name=$(get_ddev_project_name 2>/dev/null) && is_ddev_project_running "$project_name" >/dev/null 2>&1; then
         debug "DDEV is running - executing cache:clear via container"
         
         local console_flags=""
@@ -3057,7 +3058,8 @@ _execute_cache_delete_command() {
     debug "Deleting cache (smart execution)..."
     
     # Check if DDEV project is running without starting it
-    if is_ddev_project_running >/dev/null 2>&1; then
+    local project_name
+    if project_name=$(get_ddev_project_name 2>/dev/null) && is_ddev_project_running "$project_name" >/dev/null 2>&1; then
         debug "DDEV is running - deleting cache via container"
         ddev exec rm -rf var/cache/dev* var/cache/prod*
     else
@@ -3088,15 +3090,19 @@ _execute_composer_smart_command() {
         debug "Local composer found - executing locally"
         info "Running composer $composerparam locally..."
         composer "$composerparam"
-    elif is_ddev_project_running >/dev/null 2>&1; then
-        debug "DDEV is running - executing composer via container"
-        ddev composer "$composerparam"
     else
-        warn "Neither local composer nor DDEV is available"
-        info "Options:"
-        info "  - Install composer locally: https://getcomposer.org/download/"
-        info "  - Start DDEV: dev start"
-        return 1
+        # Check if DDEV is running as fallback
+        local project_name
+        if project_name=$(get_ddev_project_name 2>/dev/null) && is_ddev_project_running "$project_name" >/dev/null 2>&1; then
+            debug "DDEV is running - executing composer via container"
+            ddev composer "$composerparam"
+        else
+            warn "Neither local composer nor DDEV is available"
+            info "Options:"
+            info "  - Install composer locally: https://getcomposer.org/download/"
+            info "  - Start DDEV: dev start"
+            return 1
+        fi
     fi
 }
 
@@ -3108,15 +3114,19 @@ _execute_composer_smart_require_command() {
         debug "Local composer found - executing locally"
         info "Adding package $composerparam locally..."
         composer require "$composerparam"
-    elif is_ddev_project_running >/dev/null 2>&1; then
-        debug "DDEV is running - executing composer via container"
-        ddev composer require "$composerparam"
     else
-        warn "Neither local composer nor DDEV is available"
-        info "Options:"
-        info "  - Install composer locally: https://getcomposer.org/download/"
-        info "  - Start DDEV: dev start"
-        return 1
+        # Check if DDEV is running as fallback
+        local project_name
+        if project_name=$(get_ddev_project_name 2>/dev/null) && is_ddev_project_running "$project_name" >/dev/null 2>&1; then
+            debug "DDEV is running - executing composer via container"
+            ddev composer require "$composerparam"
+        else
+            warn "Neither local composer nor DDEV is available"
+            info "Options:"
+            info "  - Install composer locally: https://getcomposer.org/download/"
+            info "  - Start DDEV: dev start"
+            return 1
+        fi
     fi
 }
 
@@ -3128,15 +3138,19 @@ _execute_composer_smart_remove_command() {
         debug "Local composer found - executing locally"
         info "Removing package $composerparam locally..."
         composer remove "$composerparam"
-    elif is_ddev_project_running >/dev/null 2>&1; then
-        debug "DDEV is running - executing composer via container"
-        ddev composer remove "$composerparam"
     else
-        warn "Neither local composer nor DDEV is available"
-        info "Options:"
-        info "  - Install composer locally: https://getcomposer.org/download/"
-        info "  - Start DDEV: dev start"
-        return 1
+        # Check if DDEV is running as fallback
+        local project_name
+        if project_name=$(get_ddev_project_name 2>/dev/null) && is_ddev_project_running "$project_name" >/dev/null 2>&1; then
+            debug "DDEV is running - executing composer via container"
+            ddev composer remove "$composerparam"
+        else
+            warn "Neither local composer nor DDEV is available"
+            info "Options:"
+            info "  - Install composer locally: https://getcomposer.org/download/"
+            info "  - Start DDEV: dev start"
+            return 1
+        fi
     fi
 }
 
