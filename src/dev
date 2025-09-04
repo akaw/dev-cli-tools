@@ -6,13 +6,13 @@
 #
 # Description: dDEV shortening tools
 # Usage: dev [OPTIONS] [PARAMETERS]
-# Version: 1.6.1
+# Version: 1.6.2
 # https://github.com/akaw/dev-cli-tools/
 #
 # shellcheck disable=SC2034,SC2168,SC2317
 
 # Default Configuration
-VERSION="1.6.1"
+VERSION="1.6.2"
 DOCKER_ENVIRONMENT="${DOCKER_ENVIRONMENT:-orbstack}"
 BACKUP_DIR="${BACKUP_DIR:-.project/backups}"
 DB_EXPORT_FILE="${DB_EXPORT_FILE:-.project/db.sql.gz}"
@@ -860,6 +860,14 @@ get_cached_container_status() {
         return 0
     fi
     return 1
+}
+
+# Invalidate cache for a specific project
+invalidate_project_cache() {
+    local project_name="$1"
+    debug "Invalidating cache for project: $project_name"
+    unset "CONTAINER_STATUS_CACHE[$project_name]"
+    unset "PROJECT_NAME_CACHE[$(pwd)]"
 }
 
 # Performance monitoring function
@@ -2596,12 +2604,20 @@ is_docker_container_running() {
     debug "Checking for running Docker container: ddev-${project_name}-web"
 
     # Use more efficient docker command with specific container name
-    if docker container inspect "ddev-${project_name}-web" --format '{{.State.Status}}' 2>/dev/null | grep -q "running"; then
+    local container_status
+    if container_status=$(docker container inspect "ddev-${project_name}-web" --format '{{.State.Status}}' 2>/dev/null); then
+        debug "Docker container status: $container_status"
+        if echo "$container_status" | grep -q "running"; then
         debug "Docker container is running"
-        cache_container_status "$project_name" "running"
+            cache_container_status "$project_name" "running"
         return 0
     else
-        debug "Docker container is not running"
+            debug "Docker container exists but is not running (status: $container_status)"
+            cache_container_status "$project_name" "stopped"
+            return 1
+        fi
+    else
+        debug "Docker container does not exist or docker command failed"
         cache_container_status "$project_name" "stopped"
         return 1
     fi
@@ -2609,7 +2625,7 @@ is_docker_container_running() {
 
 # Parse DDEV JSON status using jq or fallback to grep
 parse_ddev_json_status() {
-    local json_outputt="$1"
+    local json_output="$1"
 
     if command -v jq >/dev/null 2>&1; then
         local status
@@ -2644,13 +2660,14 @@ is_ddev_project_running() {
         return 1
     fi
 
+    debug "DDEV JSON output received, parsing status..."
     if parse_ddev_json_status "$json_output"; then
-        debug "DDEV reports project as running"
+        debug "DDEV JSON API reports project as running"
         cache_container_status "$project_name" "running"
         return 0
     else
-        debug "DDEV reports project as not running"
-        cache_container_status "$project_name" "stopped"
+        debug "DDEV JSON API reports project as not running"
+        # Don't cache as stopped yet, let other checks verify
         return 1
     fi
 }
@@ -2718,19 +2735,29 @@ check_and_ensure_running_container() {
     fi
 
     # Check if already running (optimized Docker check)
+    debug "Performing Docker container check for: $project_name"
     if is_docker_container_running "$project_name"; then
-        debug "Project is already running - no action needed"
+        debug "Project is already running (Docker check) - no action needed"
         return 0
     fi
 
     # Fallback: check via DDEV JSON API (with timeout)
+    debug "Docker check failed, trying DDEV JSON API check"
     if is_ddev_project_running "$project_name"; then
-        debug "Project is running according to DDEV"
+        debug "Project is running according to DDEV JSON API"
+        return 0
+    fi
+
+    # Final verification with ddev status
+    debug "JSON API check failed, performing final ddev status verification"
+    if timeout 10 ddev status 2>/dev/null | grep -q "OK"; then
+        debug "Project is actually running (ddev status shows OK) - updating cache"
+        cache_container_status "$project_name" "running"
         return 0
     fi
 
     # Project is not running - start it
-    debug "Project is not running - starting now"
+    debug "All checks confirm project is not running - starting now"
     start_ddev_project
 }
 
