@@ -2,6 +2,23 @@
 
 All notable changes to the Development CLI Tools will be documented in this file.
 
+## [1.6.3] - 2025-01-05
+
+### Fixed - Plugin Command Parameter Handling
+- **Plugin Commands**: Fixed parameter passing for all plugin lifecycle commands
+  - `plde`, `plac`, `plin`, `plun`, `plup` now correctly handle plugin names as separate parameters
+  - Resolved "Command not defined" error when using plugin commands with parameters
+  - Enhanced console command execution to support plugin-specific parameters
+- **Command Execution**: Improved console command parameter handling
+  - Added `consolepluginparam` variable for proper plugin parameter separation
+  - Fixed parameter passing in `_execute_console_command` function
+  - Maintained backward compatibility with existing console commands
+
+### Technical Improvements
+- Enhanced plugin handler functions (`handle_plugin_*`) to separate command and parameters
+- Improved error handling for plugin lifecycle operations
+- Added proper cleanup for new plugin parameter variables
+
 ## [1.4.0] - 2024-12-29
 
 ### Added - Major Architecture Improvements

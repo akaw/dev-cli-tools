@@ -12,7 +12,7 @@
 # shellcheck disable=SC2034,SC2168,SC2317
 
 # Default Configuration
-VERSION="1.6.2"
+VERSION="1.6.3"
 DOCKER_ENVIRONMENT="${DOCKER_ENVIRONMENT:-orbstack}"
 BACKUP_DIR="${BACKUP_DIR:-.project/backups}"
 DB_EXPORT_FILE="${DB_EXPORT_FILE:-.project/db.sql.gz}"
@@ -477,31 +477,36 @@ handle_plugin_list() {
 handle_plugin_activate() {
     debug "Activating plugin..."
     console=1
-    consoleparam="plugin:activate ${1-}"
+    consoleparam="plugin:activate"
+    consolepluginparam="${1-}"
 }
 
 handle_plugin_install() {
     debug "Installing plugin..."
     console=1
-    consoleparam="plugin:install ${1-}"
+    consoleparam="plugin:install"
+    consolepluginparam="${1-}"
 }
 
 handle_plugin_uninstall() {
     debug "Uninstalling plugin..."
     console=1
-    consoleparam="plugin:uninstall ${1-}"
+    consoleparam="plugin:uninstall"
+    consolepluginparam="${1-}"
 }
 
 handle_plugin_update() {
     debug "Updating plugin..."
     console=1
-    consoleparam="plugin:update ${1-}"
+    consoleparam="plugin:update"
+    consolepluginparam="${1-}"
 }
 
 handle_plugin_deactivate() {
     debug "Deactivating plugin..."
     console=1
-    consoleparam="plugin:deactivate ${1-}"
+    consoleparam="plugin:deactivate"
+    consolepluginparam="${1-}"
 }
 
 handle_project_new() {
@@ -2145,6 +2150,7 @@ init_command_flags() {
     # Console commands
     console=0
     consoleparam=""
+    consolepluginparam=""
     no_deprecations=0
     verbose=0
 
@@ -2455,7 +2461,7 @@ execute_commands() {
     unset new newparam start down restart status init ssh \
         exportdb exportdbparam importdb importdbparam sequelace \
         xdebug xdebugparam test testparam logs mail deletecache \
-        console consoleparam no_deprecations verbose \
+        console consoleparam consolepluginparam no_deprecations verbose \
         build buildparam watch watchparam \
         composer composerparam require requireparam remove removeparam \
         packages packagesparam prefersource prefersourceparam \
@@ -2888,7 +2894,17 @@ _execute_console_command() {
     [[ $no_deprecations == 1 ]] && debug "Deprecation warnings suppressed via user flag"
     [[ $verbose == 1 ]] && console_flags+=" -v"
 
-    run_console_command "$consoleparam" "$console_flags" "$env_vars"
+    # Handle plugin commands with parameters separately
+    if [[ -n "$consolepluginparam" ]]; then
+        debug "Executing console command with plugin parameter: $consoleparam $consolepluginparam"
+        if [[ -n "$env_vars" ]]; then
+            ddev exec "$env_vars" bin/console $console_flags "$consoleparam" "$consolepluginparam"
+        else
+            ddev exec bin/console $console_flags "$consoleparam" "$consolepluginparam"
+        fi
+    else
+        run_console_command "$consoleparam" "$console_flags" "$env_vars"
+    fi
 }
 
 # Internal function for composer command execution
